@@ -1,0 +1,80 @@
+.Dd $Mdocdate: February 15 2011 $
+.Dt JSHON 1
+.Os
+.Sh NAME
+.Nm jshon
+.Nd JSON parser for the shell
+.Sh SYNOPSIS
+.Nm jshon
+-[t|l|k|u] -s value -[e|i] index -m index,value
+.Sh DESCRIPTION
+.Nm
+parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk.
+.Pp
+.Nm
+loads json text from stdin, performs actions, then dumps to stdout.  Some of the options output json, others output plain text summaries.  Because Bash has very poor nested datastructures,
+.Nm
+is a breadth-first parser and all actions work on the outermost element.  Actions may be chained sequentially to reduce calls to
+.Nm
+.
+.Sh ACTIONS
+Each action takes the form of a short option.  Some require arguments.  All examples will work on this json sample:
+.Pp
+\&  {"a":1,"b":[true,false,null,"none"],"c":{"d":4,"e":5}}
+.br
+\&  jshon [actions] < sample.json
+.Pp
+.Bl -tag -width ".." -compact
+.It Cm -t
+(type) returns string, object, list, number, bool, null
+.Pp
+\&  jshon -t -> object
+.Pp
+.It Cm -l
+(length) returns an integer.  Only works on string, object, list.
+.Pp
+\&  jshon -l -> 3
+.Pp
+.It Cm -k
+(keys) returns a newline separated list of keys.  Only works on object.
+.Pp
+\&  jshon -k -> a b c
+.Pp
+.It Cm -e index
+(extract) returns json value at "index".  Only works on object, list.
+.Pp
+\&  jshon -e c -> {"d":4,"e":5}
+.Pp
+.It Cm -s value
+(string) returns a json encoded string.  Ignores stdin.
+.Pp
+\&  jshon -s "back\[rs]slash" -> "back\[rs]\[rs]slash"
+.Pp
+.It Cm -u
+(unstring) returns a decoded string.  Only works on string.
+.Pp
+\&  jshon -e b -e 3 -u -> none
+.Pp
+.It Cm -m index,value
+(modify) edits an element in a list or a dict.  Value must be escaped.  If value is remove, delete the index.  If value is true/false/null, insert the primitive type.  Quoting strings is optional, except for the ambiguous case of remove/true/false/null.  Lists support several magic indexes.  Negative numbers wrap around the back, and append will add a new element after the last.
+.Pp
+\&  jshon -m a,first -> {"a":"first", ...}
+.Pp
+.It Cm -i index
+(insert) is complicated.  It is the reverse of extract.  Extract saves a copy of the json on a stack.  Insert pops json from the stack, and inserts that bit of json into the new top of the stack.  Use extract to dive into the json tree, modify to change something, and insert to push the changes back up the tree.
+.Pp
+\&  jshon -e a -i a -> the orginal json
+.br
+\&  jshon -e b -m 2,remove -m 2,remove -m append,1.2 -i b -> {"a":1, "b":[true,false,1.2], "c":{"d":4,"e":5}}
+.Pp
+.Sh AUTHORS
+.An -nosplit
+.Pp
+.Nm
+was written by
+.An Kyle Keen Aq keenerd@gmail.com ,
+and
+.An Dave Reisner Aq d@falconindy.com .
+.Sh BUGS
+Numerous!  There are no stack over/underflow checks.  Forward slashes are not escaped.  Object indexes with commas are broken.  On any error it exits without saying why.  Documentation is very brief.
+
