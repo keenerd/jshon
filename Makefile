@@ -1,11 +1,13 @@
-# jshon - a simple AUR downloader
+# jshon - command line JSON parsing
 
-CC      ?= gcc
-CFLAGS  +=-std=c99 -Wall -pedantic -Wextra -Werror
-LDFLAGS +=-ljansson
+CC      ?=  gcc
+CFLAGS  += -std=c99 -Wall -pedantic -Wextra -Werror
+LDFLAGS += -ljansson
 
 SRC = jshon.c
 OBJ = ${SRC:.c=.o}
+
+VERSION=$(shell date +%Y%m%d)
 
 all: jshon
 
@@ -22,6 +24,11 @@ strip: jshon
 clean:
 	rm -f *.o jshon
 
-.PHONY: all clean strip
+dist: clean
+	mkdir jshon-${VERSION}
+	cp jshon.c jshon.1 Makefile jshon-${VERSION}
+	tar czf jshon-${VERSION}.tar.gz jshon-${VERSION}
+	${RM} -r jshon-${VERSION}
 
+.PHONY: all clean dist strip
 

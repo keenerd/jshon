@@ -14,8 +14,13 @@ md5sums=('d3bc9f0171193b84f75967c3b3744bc6')
 
 build() {
   cd "$srcdir/$pkgname"
+
   make
-  gzip "$pkgname.1"
-  install -D -m 0755 $pkgname "$pkgdir/usr/bin/$pkgname"
-  install -D -m 0644 "$pkgname.1.gz" "$pkgdir/usr/share/man/man1/$pkgname.1.gz"
+}
+
+package() {
+  cd "$srcdir/$pkgname"
+
+  install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+  install -Dm644 $pkgname.1 "$pkgdir/usr/share/man/man1/$pkgname.1"
 }
