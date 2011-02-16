@@ -29,8 +29,6 @@
     Could use up a lot of memory.
     No safety measures anywhere.
 
-    TODO
-    man page
 */
 
 // build with gcc -o jshon jshon.c -ljansson
@@ -119,10 +117,7 @@ json_t* smart_loads(char* j_string)
     json_t* json;
     json_error_t error;
     char temp[strlen(j_string) + 3];
-    temp[0] = '\0';
-    strcat(temp, "[");
-    strcat(temp, j_string);
-    strcat(temp, "]");
+    snprintf(temp, strlen(j_string) + 3, "[%s]", j_string);
     json = json_loads(temp, &error);
     if (!json)
         {return json_string(j_string);}
@@ -354,7 +349,7 @@ int main (int argc, char *argv[])
                 break;
         }
     }
-    if (output)
+    if (output && stackpointer != stack)
         {printf("%s\n", smart_dumps(POP));}
 }
 
