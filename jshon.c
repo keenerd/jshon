@@ -116,8 +116,8 @@ json_t* smart_loads(char* j_string)
 {
     json_t* json;
     json_error_t error;
-    char temp[strlen(j_string) + 3];
-    snprintf(temp, strlen(j_string) + 3, "[%s]", j_string);
+    char *temp;
+    asprintf(&temp, "[%s]", j_string);
     json = json_loads(temp, 0, &error);
     if (!json)
         {return json_string(j_string);}
