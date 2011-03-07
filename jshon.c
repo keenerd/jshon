@@ -95,7 +95,7 @@ char* smart_dumps(json_t* json)
             asprintf(&temp2, "%.*s", (signed)strlen(temp)-2, &temp[1]);
             return temp2;
         case JSON_INTEGER:
-            asprintf(&temp, "%d", json_integer_value(json));
+            asprintf(&temp, "%ld", (long)json_integer_value(json));
             return temp;
         case JSON_REAL:
             asprintf(&temp, "%f", json_real_value(json));
@@ -118,7 +118,7 @@ json_t* smart_loads(char* j_string)
     json_error_t error;
     char temp[strlen(j_string) + 3];
     snprintf(temp, strlen(j_string) + 3, "[%s]", j_string);
-    json = json_loads(temp, &error);
+    json = json_loads(temp, 0, &error);
     if (!json)
         {return json_string(j_string);}
     return json_array_get(json, 0);
@@ -288,7 +288,7 @@ int main (int argc, char *argv[])
     json_error_t error;
     
     content = read_stdin();
-    PUSH(json_loads(content, &error));
+    PUSH(json_loads(content, 0, &error));
     
     while ((optchar = getopt(argc, argv, "tlkue:s:m:i:")) != -1)
     {
