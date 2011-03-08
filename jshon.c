@@ -148,7 +148,7 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     if(brackets == 0)
         return in;
 
-    // skip leading whitespace, counting rows and columns
+    // skip leading whitespace
     while(first < last && JSON_WHITE(*first))
         ++first;
 
