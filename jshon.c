@@ -148,22 +148,22 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
 
     // no closing brackets? it's not jsonp
     if (brackets == 0)
-        return in;
+        {return in;}
 
     // skip leading whitespace
     while (first < last && JSON_WHITE(*first))
-        ++first;
+        {++first;}
 
     // skip leading identifier if present
     while (first < last && JSON_IDENTIFIER(*first))
-        ++first;
+        {++first;}
 
     // skip over forward brackets and whitespace, counting down the opening brackets
     // against the closing brackets we've already done
     while (first < last && (JSON_WHITE(*first) || *first == '('))
     {
         if (*first == '(')
-            --brackets;
+            {--brackets;}
         ++first;
     }
 
@@ -171,11 +171,12 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     // and closing brackets matched, and provided the two pointers didn't meet in
     // the middle (leaving no room for any actual JSON)
     if (brackets != 0 || !(first < last))
-        return in;
+        {return in;}
 
     // count lines and columns skipped over
     *rows_skipped = *cols_skipped = 0;
-    while (in < first) {
+    while (in < first) 
+    {
         ++*cols_skipped;
         if (*in++ == '\n')
         {
@@ -313,10 +314,10 @@ void keys(json_t* json)
     }
 
     if (dumps_flags & JSON_SORT_KEYS)
-        qsort(keys, n, sizeof(char*), compare_strcmp);
+        {qsort(keys, n, sizeof(char*), compare_strcmp);}
 
     for (i = 0; i < n; ++i)
-        printf("%s\n", keys[i]);
+        {printf("%s\n", keys[i]);}
 
     free(keys);
 }
@@ -416,6 +417,7 @@ json_t* update(json_t* json, char* key, char* j_string)
 }
 
 int main (int argc, char *argv[])
+#define ALL_OPTIONS "PStlkue:s:m:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -427,8 +429,9 @@ int main (int argc, char *argv[])
     int jsonp = 0;   // flag if we should tolerate JSONP wrapping
     int jsonp_rows = 0, jsonp_cols = 0;   // rows+cols skipped over by JSONP prologue
 
+    // todo: get more jsonp stuff out of main
+
     // non-manipulation options
-#define ALL_OPTIONS "PStlkue:s:m:i:"
     while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
     {
         switch (optchar)
@@ -450,20 +453,22 @@ int main (int argc, char *argv[])
 
 
     content = read_stdin();
-    if (!content[0]) {
+    if (!content[0])
+    {
         fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");
         exit(1);
     }
 
     if (jsonp)
-        content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);
+        {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
 
     json_error_t error;
     PUSH(compat_json_loads(content, &error));
-    if (!PEEK) {
+    if (!PEEK)
+    {
         const char *jsonp_status = "";
         if (jsonp)
-            jsonp_status = (jsonp_rows||jsonp_cols) ? "(jsonp detected) " : "(jsonp not detected) ";
+            {jsonp_status = (jsonp_rows||jsonp_cols) ? "(jsonp detected) " : "(jsonp not detected) ";}
 
 #if JANSSON_MAJOR_VERSION < 2
         fprintf(stderr, "ERROR: json %sread error, line %0d: %s\n",
