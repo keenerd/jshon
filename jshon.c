@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/param.h>
 #include <unistd.h>
 #include <jansson.h>
 
@@ -442,7 +443,10 @@ int main (int argc, char *argv[])
                 break;
         }
     }
-    optind = optreset = 1;
+    optind = 1;
+#ifdef BSD
+    optreset = 1;
+#endif
 
 
     content = read_stdin();
