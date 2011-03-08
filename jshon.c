@@ -12,7 +12,8 @@
     stdin is always json
     stdout is always json (except for -u, -t, -l, -k)
 
-    -p -> detect and ignore JSONP wrapper, if present
+    -P -> detect and ignore JSONP wrapper, if present
+    -S -> sort keys when writing objects
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -187,6 +188,9 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     return first;
 }
 
+
+int dumps_flags = JSON_INDENT(1);
+
 char* smart_dumps(json_t* json)
 // json_dumps is broken on simple types
 {
@@ -196,9 +200,9 @@ char* smart_dumps(json_t* json)
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
-            return json_dumps(json, JSON_INDENT(1));
+            return json_dumps(json, dumps_flags);
         case JSON_ARRAY:
-            return json_dumps(json, JSON_INDENT(1));
+            return json_dumps(json, dumps_flags);
         case JSON_STRING:
             // hack to print escaped string
             // but / is still not escaped
@@ -280,18 +284,40 @@ int length(json_t* json)
     }
 }
 
+int compare_strcmp(const void *a, const void *b)
+{
+    const char *sa = ((const char**)a)[0];
+    const char *sb = ((const char**)b)[0];
+    return strcmp(sa, sb);
+}
+
 void keys(json_t* json)
 // shoddy, prints directly
 {
     void* iter;
+    const char** keys;
+    size_t i, n;
+
     if (!json_is_object(json))
         {exit(1);}
+    if (!((keys = malloc(sizeof(char*) * json_object_size(json)))))
+        {fprintf(stderr, "ERROR: out of memory\n"); exit(1);}
+
     iter = json_object_iter(json);
+    n = 0;
     while (iter)
     {
-        printf("%s\n", json_object_iter_key(iter));
+        keys[n++] = json_object_iter_key(iter);
         iter = json_object_iter_next(json, iter);
     }
+
+    if(dumps_flags & JSON_SORT_KEYS)
+        qsort(keys, n, sizeof(char*), compare_strcmp);
+
+    for(i = 0; i < n; ++i)
+        printf("%s\n", keys[i]);
+
+    free(keys);
 }
 
 const char* unstring(json_t* json)
@@ -401,13 +427,16 @@ int main (int argc, char *argv[])
     int jsonp_rows = 0, jsonp_cols = 0;   // rows+cols skipped over by JSONP prologue
 
     // non-manipulation options
-#define ALL_OPTIONS "ptlkue:s:m:i:"
+#define ALL_OPTIONS "PStlkue:s:m:i:"
     while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
     {
         switch(optchar)
 	{
-	    case 'p':
+	    case 'P':
 	        jsonp = 1;
+		break;
+	    case 'S':
+	        dumps_flags |= JSON_SORT_KEYS;
 		break;
 	    default:
 	        break;
@@ -495,11 +524,12 @@ int main (int argc, char *argv[])
                 PUSH(update(json, arg1, j_string));
                 output = 1;
                 break;
-	    case 'p':  // not a manipulation
+	    case 'P':  // not a manipulation
+	    case 'S': 
 	        break;
             default:
                 printf("Unknown command line option...\n");
-                printf("Valid: -p -t -l -k -u -e -s -m -i\n");
+                printf("Valid: -P -S -t -l -k -u -e -s -m -i\n");
                 exit(0);
                 break;
         }
