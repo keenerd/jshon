@@ -33,6 +33,17 @@
 
 // build with gcc -o jshon jshon.c -ljansson
 
+
+// deal with API incompatibility between jansson 1.x and 2.x
+#if (!defined(JANSSON_MAJOR_VERSION)) || (JANSSON_MAJOR_VERSION < 2)
+#    define compat_json_loads json_loads
+#else
+static json_t *compat_json_loads(const char *input, json_error_t *error)
+{
+    return json_loads(input, 0, error);
+}
+#endif
+
 // stack depth is limited by maxargs
 // if you need more depth, use a SAX parser
 json_t* stack[128];
@@ -118,7 +129,7 @@ json_t* smart_loads(char* j_string)
     json_error_t error;
     char *temp;
     asprintf(&temp, "[%s]", j_string);
-    json = json_loads(temp, 0, &error);
+    json = compat_json_loads(temp, &error);
     if (!json)
         {return json_string(j_string);}
     return json_array_get(json, 0);
@@ -288,7 +299,7 @@ int main (int argc, char *argv[])
     json_error_t error;
     
     content = read_stdin();
-    PUSH(json_loads(content, 0, &error));
+    PUSH(compat_json_loads(content, &error));
     
     while ((optchar = getopt(argc, argv, "tlkue:s:m:i:")) != -1)
     {
