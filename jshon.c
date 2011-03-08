@@ -61,7 +61,7 @@ json_t** stackpointer = &stack[0];
 
 void PUSH(json_t* v)
 {
-    if(stackpointer >= &stack[STACKDEPTH]) {
+    if (stackpointer >= &stack[STACKDEPTH]) {
         fprintf(stderr, "internal error: stack overflow\n");
         exit(1);
     }
@@ -69,7 +69,7 @@ void PUSH(json_t* v)
 }
 
 json_t** stack_safe_peek() {
-    if(stackpointer < &stack[1]) {
+    if (stackpointer < &stack[1]) {
         fprintf(stderr, "internal error: stack underflow\n");
         exit(1);
     }
@@ -133,54 +133,54 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     char *last = in + strlen(in) - 1;
 
     // skip over whitespace and semicolons at the end
-    while(first < last && (JSON_WHITE(*last) || *last == ';'))
+    while (first < last && (JSON_WHITE(*last) || *last == ';'))
         --last;
 
     // count closing brackets at the end, still skipping whitespace
     int brackets = 0;
-    while(first < last && (JSON_WHITE(*last) || *last == ')'))
+    while (first < last && (JSON_WHITE(*last) || *last == ')'))
     {
-        if(*last == ')')
-	    ++brackets;
-	--last;
+        if (*last == ')')
+            ++brackets;
+        --last;
     }
 
     // no closing brackets? it's not jsonp
-    if(brackets == 0)
+    if (brackets == 0)
         return in;
 
     // skip leading whitespace
-    while(first < last && JSON_WHITE(*first))
+    while (first < last && JSON_WHITE(*first))
         ++first;
 
     // skip leading identifier if present
-    while(first < last && JSON_IDENTIFIER(*first))
-    	++first;
+    while (first < last && JSON_IDENTIFIER(*first))
+        ++first;
 
     // skip over forward brackets and whitespace, counting down the opening brackets
     // against the closing brackets we've already done
-    while(first < last && (JSON_WHITE(*first) || *first == '('))
+    while (first < last && (JSON_WHITE(*first) || *first == '('))
     {
-        if(*first == '(')
-	    --brackets;
+        if (*first == '(')
+            --brackets;
         ++first;
     }
 
     // at this point we have a valid jsonp wrapper, provided that the number of opening
     // and closing brackets matched, and provided the two pointers didn't meet in
     // the middle (leaving no room for any actual JSON)
-    if(brackets != 0 || !(first < last))
-    	return in;
+    if (brackets != 0 || !(first < last))
+        return in;
 
     // count lines and columns skipped over
     *rows_skipped = *cols_skipped = 0;
-    while(in < first) {
+    while (in < first) {
         ++*cols_skipped;
-        if(*in++ == '\n')
-	{
-	    *cols_skipped = 0;
-	    ++*rows_skipped;
-	}
+        if (*in++ == '\n')
+        {
+            *cols_skipped = 0;
+            ++*rows_skipped;
+        }
     }
 
     // strip off beginning and end
@@ -311,10 +311,10 @@ void keys(json_t* json)
         iter = json_object_iter_next(json, iter);
     }
 
-    if(dumps_flags & JSON_SORT_KEYS)
+    if (dumps_flags & JSON_SORT_KEYS)
         qsort(keys, n, sizeof(char*), compare_strcmp);
 
-    for(i = 0; i < n; ++i)
+    for (i = 0; i < n; ++i)
         printf("%s\n", keys[i]);
 
     free(keys);
@@ -430,43 +430,43 @@ int main (int argc, char *argv[])
 #define ALL_OPTIONS "PStlkue:s:m:i:"
     while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
     {
-        switch(optchar)
-	{
-	    case 'P':
-	        jsonp = 1;
-		break;
-	    case 'S':
-	        dumps_flags |= JSON_SORT_KEYS;
-		break;
-	    default:
-	        break;
+        switch (optchar)
+        {
+            case 'P':
+                jsonp = 1;
+                break;
+            case 'S':
+                dumps_flags |= JSON_SORT_KEYS;
+                break;
+            default:
+                break;
         }
     }
     optind = optreset = 1;
 
 
     content = read_stdin();
-    if(!content[0]) {
+    if (!content[0]) {
         fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");
         exit(1);
     }
 
-    if(jsonp)
+    if (jsonp)
         content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);
 
     json_error_t error;
     PUSH(compat_json_loads(content, &error));
-    if(!PEEK) {
+    if (!PEEK) {
         const char *jsonp_status = "";
-	if(jsonp)
-	    jsonp_status = (jsonp_rows||jsonp_cols) ? "(jsonp detected) " : "(jsonp not detected) ";
+        if (jsonp)
+            jsonp_status = (jsonp_rows||jsonp_cols) ? "(jsonp detected) " : "(jsonp not detected) ";
 
 #if JANSSON_MAJOR_VERSION < 2
         fprintf(stderr, "ERROR: json %sread error, line %0d: %s\n",
-		jsonp_status, error.line + jsonp_rows, error.text);
+            jsonp_status, error.line + jsonp_rows, error.text);
 #else
         fprintf(stderr, "ERROR: json %sread error, line %0d column %0d: %s\n",
-		jsonp_status, error.line + jsonp_rows, error.column + jsonp_cols, error.text);
+            jsonp_status, error.line + jsonp_rows, error.column + jsonp_cols, error.text);
 #endif
         exit(1);
     }
@@ -524,9 +524,9 @@ int main (int argc, char *argv[])
                 PUSH(update(json, arg1, j_string));
                 output = 1;
                 break;
-	    case 'P':  // not a manipulation
-	    case 'S': 
-	        break;
+            case 'P':  // not a manipulation
+            case 'S': 
+                break;
             default:
                 printf("Unknown command line option...\n");
                 printf("Valid: -P -S -t -l -k -u -e -s -m -i\n");
