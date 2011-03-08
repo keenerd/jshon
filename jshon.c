@@ -46,12 +46,31 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 
 // stack depth is limited by maxargs
 // if you need more depth, use a SAX parser
-json_t* stack[128];
+#define STACKDEPTH 128
+
+json_t* stack[STACKDEPTH];
 json_t** stackpointer = &stack[0];
+
+void PUSH(json_t* v)
+{
+    if(stackpointer >= &stack[STACKDEPTH]) {
+        fprintf(stderr, "internal error: stack overflow\n");
+        exit(1);
+    }
+    *stackpointer++ = v;
+}
+
+json_t** stack_safe_peek() {
+    if(stackpointer < &stack[1]) {
+        fprintf(stderr, "internal error: stack underflow\n");
+        exit(1);
+    }
+    return stackpointer - 1;
+}
+
 // can not use two macros on the same line
-#define PUSH(json) *stackpointer++ = json
-#define POP        *--stackpointer
-#define PEEK       *(stackpointer - 1)
+#define POP        *((stackpointer = stack_safe_peek()))
+#define PEEK       *(stack_safe_peek())
 
 char* read_stdin(void)
 // http://stackoverflow.com/questions/2496668/
