@@ -35,7 +35,11 @@
 
 
 // deal with API incompatibility between jansson 1.x and 2.x
-#if (!defined(JANSSON_MAJOR_VERSION)) || (JANSSON_MAJOR_VERSION < 2)
+#ifndef JANSSON_MAJOR_VERSION
+#  define JANSSON_MAJOR_VERSION (1)
+#endif
+
+#if JANSSON_MAJOR_VERSION < 2
 #    define compat_json_loads json_loads
 #else
 static json_t *compat_json_loads(const char *input, json_error_t *error)
@@ -318,7 +322,22 @@ int main (int argc, char *argv[])
     json_error_t error;
     
     content = read_stdin();
+    if(!content[0]) {
+        fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");
+        exit(1);
+    }
+
     PUSH(compat_json_loads(content, &error));
+    if(!PEEK) {
+#if JANSSON_MAJOR_VERSION < 2
+        fprintf(stderr, "ERROR: json read error, line %0d: %s\n",
+		error.line, error.text);
+#else
+        fprintf(stderr, "ERROR: json read error, line %0d column %0d: %s\n",
+		error.line, error.column, error.text);
+#endif
+        exit(1);
+    }
     
     while ((optchar = getopt(argc, argv, "tlkue:s:m:i:")) != -1)
     {
