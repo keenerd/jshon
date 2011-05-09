@@ -539,7 +539,7 @@ int main (int argc, char *argv[])
             default:
                 printf("Unknown command line option...\n");
                 printf("Valid: -P -S -t -l -k -u -e -s -m -i\n");
-                exit(0);
+                exit(2);
                 break;
         }
     }
