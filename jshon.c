@@ -22,15 +22,16 @@
     -e(xtract) index -> only works on dict, list
     -s(tring) value -> adds json escapes
     -u(nstring) -> removes json escapes
-    -m(modify) index,value -> only works on dict, list
+    -m(odify) index,value -> only works on dict, list
                               index can be append, value can be remove
                               no commas in index
     -i(nsert) index -> opposite of extract, rebuilds json
                        "-e field -i field" returns original structure
+    -a(cross) -> iterate across the current dict or list
 
     Multiple commands can be chained.
     Entire json is loaded into memory.
-    -e copies and stores on a stack.
+    -e/-a copies and stores on a stack.
     Could use up a lot of memory.
     No safety measures anywhere.
 
@@ -62,15 +63,18 @@ json_t** stackpointer = &stack[0];
 
 void PUSH(json_t* v)
 {
-    if (stackpointer >= &stack[STACKDEPTH]) {
+    if (stackpointer >= &stack[STACKDEPTH])
+    {
         fprintf(stderr, "internal error: stack overflow\n");
         exit(1);
     }
     *stackpointer++ = v;
 }
 
-json_t** stack_safe_peek() {
-    if (stackpointer < &stack[1]) {
+json_t** stack_safe_peek()
+{
+    if (stackpointer < &stack[1])
+    {
         fprintf(stderr, "internal error: stack underflow\n");
         exit(1);
     }
@@ -80,6 +84,61 @@ json_t** stack_safe_peek() {
 // can not use two macros on the same line
 #define POP        *((stackpointer = stack_safe_peek()))
 #define PEEK       *(stack_safe_peek())
+
+typedef struct
+{
+    void*    itr;  // iterator
+    json_t** stk;  // stack reentry
+    int      opt;  // optind reentry
+} mapping;
+
+mapping mapstack[STACKDEPTH];
+mapping* mapstackpointer = &mapstack[0];
+
+mapping* map_safe_peek()
+{
+    if (mapstackpointer < &mapstack[1])
+    {
+        fprintf(stderr, "internal error: mapstack underflow\n");
+        exit(1);
+    }
+    return mapstackpointer - 1;
+}
+
+void MAPPUSH()
+{
+    if (mapstackpointer >= &mapstack[STACKDEPTH])
+    {
+        fprintf(stderr, "internal error: mapstack overflow\n");
+        exit(1);
+    }
+    mapstackpointer++;
+    map_safe_peek()->itr = json_object_iter(PEEK);
+    map_safe_peek()->stk = stackpointer;
+    map_safe_peek()->opt = optind;
+}
+
+void MAPPOP()
+{
+    stackpointer = map_safe_peek()->stk;
+    optind = map_safe_peek()->opt;
+    map_safe_peek()->itr = NULL;
+    map_safe_peek()->stk = NULL;
+    map_safe_peek()->opt = 0;
+    mapstackpointer = map_safe_peek();
+}
+
+void MAPNEXT()
+{
+    stackpointer = map_safe_peek()->stk;
+    optind = map_safe_peek()->opt;
+    PUSH(json_object_iter_value(map_safe_peek()->itr));
+    map_safe_peek()->itr = json_object_iter_next(*(map_safe_peek()->stk), map_safe_peek()->itr);
+}
+
+// can not use two macros on the same line
+#define MAPPEEK       *(map_safe_peek())
+#define MAPEMPTY      (mapstackpointer == &mapstack[0])
 
 char* read_stdin(void)
 // http://stackoverflow.com/questions/2496668/
@@ -135,14 +194,14 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
 
     // skip over whitespace and semicolons at the end
     while (first < last && (JSON_WHITE(*last) || *last == ';'))
-        --last;
+        {--last;}
 
     // count closing brackets at the end, still skipping whitespace
     int brackets = 0;
     while (first < last && (JSON_WHITE(*last) || *last == ')'))
     {
         if (*last == ')')
-            ++brackets;
+            {++brackets;}
         --last;
     }
 
@@ -417,7 +476,7 @@ json_t* update(json_t* json, char* key, char* j_string)
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PStlkue:s:m:i:"
+#define ALL_OPTIONS "PStlkuae:s:m:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -480,70 +539,84 @@ int main (int argc, char *argv[])
         exit(1);
     }
 
-
-    while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
+    do
     {
-        switch (optchar)
+        if (! MAPEMPTY)
         {
-            case 't':  // id type
-                printf("%s\n", pretty_type(PEEK));
-                output = 0;
-                break;
-            case 'l':  // length
-                printf("%i\n", length(PEEK));
-                output = 0;
-                break;
-            case 'k':  // keys
-                keys(PEEK);
-                output = 0;
-                break;
-            case 'u':  // unescape string
-                printf("%s\n", unstring(PEEK));
-                output = 0;
-                break;
-            case 's':  // escape string
-                arg1 = (char*) strdup(optarg);
-                PUSH(json_string(arg1));
-                output = 1;
-                break;
-            case 'm':  // modify
-                arg2 = (char*) strdup(optarg);
-                arg1 = strsep(&arg2, ",");
-                output = 1;
-                json = POP;
-                if (!strcmp(arg2, "remove"))
-                {
-                    PUSH(delete(json, arg1));
-                    break;
-                }
-                PUSH(update(json, arg1, arg2));
-                break;
-            case 'e':  // extract
-                arg1 = (char*) strdup(optarg);
-                json = PEEK;
-                PUSH(extract(json_deep_copy(json), arg1));
-                output = 1;
-                break;
-            case 'i':  // insert
-                // pointless string conversion
-                // saves writing update_native()
-                arg1 = (char*) strdup(optarg);
-                j_string = smart_dumps(POP);
-                json = POP;
-                PUSH(update(json, arg1, j_string));
-                output = 1;
-                break;
-            case 'P':  // not a manipulation
-            case 'S': 
-                break;
-            default:
-                printf("Unknown command line option...\n");
-                printf("Valid: -P -S -t -l -k -u -e -s -m -i\n");
-                exit(2);
-                break;
+            if (map_safe_peek()->itr)
+                {MAPNEXT();}
+            else
+                {MAPPOP();}
         }
-    }
-    if (output && stackpointer != stack)
-        {printf("%s\n", smart_dumps(POP));}
+        while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
+        {
+            switch (optchar)
+            {
+                case 't':  // id type
+                    printf("%s\n", pretty_type(PEEK));
+                    output = 0;
+                    break;
+                case 'l':  // length
+                    printf("%i\n", length(PEEK));
+                    output = 0;
+                    break;
+                case 'k':  // keys
+                    keys(PEEK);
+                    output = 0;
+                    break;
+                case 'u':  // unescape string
+                    printf("%s\n", unstring(PEEK));
+                    output = 0;
+                    break;
+                case 's':  // escape string
+                    arg1 = (char*) strdup(optarg);
+                    PUSH(json_string(arg1));
+                    output = 1;
+                    break;
+                case 'm':  // modify
+                    arg2 = (char*) strdup(optarg);
+                    arg1 = strsep(&arg2, ",");
+                    output = 1;
+                    json = POP;
+                    if (!strcmp(arg2, "remove"))
+                    {
+                        PUSH(delete(json, arg1));
+                        break;
+                    }
+                    PUSH(update(json, arg1, arg2));
+                    break;
+                case 'e':  // extract
+                    arg1 = (char*) strdup(optarg);
+                    json = PEEK;
+                    PUSH(extract(json_deep_copy(json), arg1));
+                    output = 1;
+                    break;
+                case 'i':  // insert
+                    // pointless string conversion
+                    // saves writing update_native()
+                    arg1 = (char*) strdup(optarg);
+                    j_string = smart_dumps(POP);
+                    json = POP;
+                    PUSH(update(json, arg1, j_string));
+                    output = 1;
+                    break;
+                case 'a':  // across
+                    MAPPUSH();
+                    output = 0;
+                    break;
+                case 'P':  // not a manipulation
+                case 'S': 
+                    break;
+                default:
+                    printf("Unknown command line option...\n");
+                    printf("Valid: -P -S -t -l -k -u -e -s -m -i -a \n");
+                    exit(2);
+                    break;
+            }
+        }
+        if (output && stackpointer != stack)
+            {printf("%s\n", smart_dumps(POP));}
+    } while (! MAPEMPTY);
 }
+
 
