@@ -285,6 +285,7 @@ char* smart_dumps(json_t* json)
         case JSON_NULL:
             return "null";
         default:
+            fprintf(stderr, "internal error: unknown type\n");
             exit(1);
     }
 }
@@ -321,6 +322,7 @@ char* pretty_type(json_t* json)
         case JSON_NULL:
             return "null";
         default:
+            fprintf(stderr, "internal error: unknown type\n");
             exit(1);
     }
 }
@@ -341,6 +343,7 @@ int length(json_t* json)
         case JSON_FALSE:
         case JSON_NULL:
         default:
+            fprintf(stderr, "type %s has no length\n", pretty_type(json));
             exit(1);
     }
 }
@@ -360,7 +363,10 @@ void keys(json_t* json)
     size_t i, n;
 
     if (!json_is_object(json))
-        {exit(1);}
+    {
+        fprintf(stderr, "type %s has no keys\n", pretty_type(json));
+        exit(1);
+    }
     if (!((keys = malloc(sizeof(char*) * json_object_size(json)))))
         {fprintf(stderr, "ERROR: out of memory\n"); exit(1);}
 
@@ -384,7 +390,10 @@ void keys(json_t* json)
 const char* unstring(json_t* json)
 {
     if (!json_is_string(json))
-        {exit(1);}
+    {
+        fprintf(stderr, "type %s is not string\n", pretty_type(json));
+        exit(1);
+    }
     return json_string_value(json);
 }
 
@@ -409,6 +418,7 @@ json_t* extract(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
+            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
             exit(1);
     }
 }
@@ -437,6 +447,7 @@ json_t* delete(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
+            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
             exit(1);
     }
 }
@@ -471,6 +482,7 @@ json_t* update(json_t* json, char* key, char* j_string)
         case JSON_FALSE:
         case JSON_NULL:
         default:
+            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
             exit(1);
     }
 }
