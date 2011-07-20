@@ -1,5 +1,5 @@
 .\" man 7 groff_mdoc  Best resource ever
-.Dd March 8, 2011
+.Dd July 20, 2011
 .Dt JSHON \&1 "Jshon Manual"
 .Os " "
 .Sh NAME
@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[t|l|k|u] -s value -[e|i] index -m index,value
+-[t|l|k|u|a] -s value -[e|i] index -m index,value
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk.
@@ -15,15 +15,22 @@ parses, reads and creates JSON.  It is designed to be as usable as possible from
 .Nm
 loads json text from stdin, performs actions, then dumps to stdout.  Some of the options output json, others output plain text summaries.  Because Bash has very poor nested datastructures,
 .Nm
-is a breadth-first parser and all actions work on the outermost element.  Actions may be chained sequentially to reduce calls to
+does not return the JSON as a native bash object.  Instead,
 .Nm
+retains a history of edits in a stack, and you manipulate the JSON element on the top of the stack.  This increases memory use compared to other parsers, but is not too bad.  Actions should be chained sequentially to reduce calls.
 .
 .Sh ACTIONS
-Each action takes the form of a short option.  Some require arguments.  All examples will work on this json sample:
+Each action takes the form of a short option.  Some require arguments.  All examples use this json sample:
 .Pp
 \&  {"a":1,"b":[true,false,null,"none"],"c":{"d":4,"e":5}}
 .br
 \&  jshon [actions] < sample.json
+.Pp
+Most common uses will only need several
+.Nm \-e 
+actions and one
+.Nm \-a
+in the middle of them.
 .Pp
 .Bl -tag -width ".." -compact
 .It Cm -t
@@ -45,6 +52,11 @@ Each action takes the form of a short option.  Some require arguments.  All exam
 (extract) returns json value at "index".  Only works on object, list.
 .Pp
 \&  jshon -e c -> {"d":4,"e":5}
+.Pp
+.It Cm -a
+(across) maps the remaining actions across the selected element.  Only works on objects and lists.  Multiple -a calls can be nested, though the need is rare in practice.
+.Pp
+\&  jshon -e b -a -t -> bool bool null string
 .Pp
 .It Cm -s value
 (string) returns a json encoded string.  Ignores stdin.

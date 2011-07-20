@@ -515,7 +515,7 @@ json_t* update(json_t* json, char* key, char* j_string)
     }
 }
 
-void debug_info(int optchar)
+void debug_stack(int optchar)
 {
     json_t** j;
     printf("BEGIN STACK DUMP %c\n", optchar);
@@ -599,12 +599,15 @@ int main (int argc, char *argv[])
     {
         if (! MAPEMPTY)
         {
-            if (! map_safe_peek()->fin)
-                {MAPNEXT();}
-            else
-                {MAPPOP();}
-            if (MAPEMPTY)
-                {break;}
+            while (map_safe_peek()->fin)
+            {
+                MAPPOP();
+                if (MAPEMPTY)
+                    {exit(0);}
+                if (map_safe_peek()->fin)
+                    {MAPNEXT();}
+            }
+            MAPNEXT();
         }
         while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
         {
@@ -667,8 +670,8 @@ int main (int argc, char *argv[])
                 case 'S': 
                     break;
                 default:
-                    printf("Unknown command line option...\n");
-                    printf("Valid: -P -S -t -l -k -u -e -s -m -i -a \n");
+                    fprintf(stderr, "Unknown command line option...\n");
+                    fprintf(stderr, "Valid: -P -S -t -l -k -u -e -s -m -i -a \n");
                     exit(2);
                     break;
             }
