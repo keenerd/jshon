@@ -59,7 +59,7 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 #define STACKDEPTH 128
 
 json_t* stack[STACKDEPTH];
-json_t** stackpointer = &stack[0];
+json_t** stackpointer = stack;
 
 void PUSH(json_t* v)
 {
@@ -87,13 +87,15 @@ json_t** stack_safe_peek()
 
 typedef struct
 {
-    void*    itr;  // iterator
+    void*    itr;  // object iterator
     json_t** stk;  // stack reentry
+    uint     lin;  // array iterator
     int      opt;  // optind reentry
+    int      fin;  // finished iteration
 } mapping;
 
 mapping mapstack[STACKDEPTH];
-mapping* mapstackpointer = &mapstack[0];
+mapping* mapstackpointer = mapstack;
 
 mapping* map_safe_peek()
 {
@@ -113,32 +115,58 @@ void MAPPUSH()
         exit(1);
     }
     mapstackpointer++;
-    map_safe_peek()->itr = json_object_iter(PEEK);
-    map_safe_peek()->stk = stackpointer;
+    map_safe_peek()->stk = stack_safe_peek();
     map_safe_peek()->opt = optind;
+    map_safe_peek()->fin = 0;
+    switch (json_typeof(PEEK))
+    {
+        case JSON_OBJECT:
+            map_safe_peek()->itr = json_object_iter(PEEK);
+            break;
+        case JSON_ARRAY:
+            map_safe_peek()->lin = 0;
+            break;
+        default:
+            fprintf(stderr, "type not mappable\n");
+            exit(1);
+    }
+}
+
+void MAPNEXT()
+{
+    stackpointer = map_safe_peek()->stk + 1;
+    optind = map_safe_peek()->opt;
+    switch (json_typeof(*(map_safe_peek()->stk)))
+    {
+        case JSON_OBJECT:
+            json_object_iter_key(map_safe_peek()->itr);
+            PUSH(json_deep_copy(json_object_iter_value(map_safe_peek()->itr)));
+            map_safe_peek()->itr = json_object_iter_next(*(map_safe_peek()->stk), map_safe_peek()->itr);
+            if (!map_safe_peek()->itr)
+                {map_safe_peek()->fin = 1;}
+            break;
+        case JSON_ARRAY:
+            PUSH(json_deep_copy(json_array_get(*(map_safe_peek()->stk), map_safe_peek()->lin)));
+            map_safe_peek()->lin++;
+            if (map_safe_peek()->lin >= json_array_size(*(map_safe_peek()->stk)))
+                {map_safe_peek()->fin = 1;}
+            break;
+        default:
+            fprintf(stderr, "type not mappable\n");
+            exit(1);
+    }
 }
 
 void MAPPOP()
 {
     stackpointer = map_safe_peek()->stk;
     optind = map_safe_peek()->opt;
-    map_safe_peek()->itr = NULL;
-    map_safe_peek()->stk = NULL;
-    map_safe_peek()->opt = 0;
     mapstackpointer = map_safe_peek();
-}
-
-void MAPNEXT()
-{
-    stackpointer = map_safe_peek()->stk;
-    optind = map_safe_peek()->opt;
-    PUSH(json_object_iter_value(map_safe_peek()->itr));
-    map_safe_peek()->itr = json_object_iter_next(*(map_safe_peek()->stk), map_safe_peek()->itr);
 }
 
 // can not use two macros on the same line
 #define MAPPEEK       *(map_safe_peek())
-#define MAPEMPTY      (mapstackpointer == &mapstack[0])
+#define MAPEMPTY      (mapstackpointer == mapstack)
 
 char* read_stdin(void)
 // http://stackoverflow.com/questions/2496668/
@@ -487,6 +515,22 @@ json_t* update(json_t* json, char* key, char* j_string)
     }
 }
 
+void debug_info(int optchar)
+{
+    json_t** j;
+    printf("BEGIN STACK DUMP %c\n", optchar);
+    for (j=stack; j<stackpointer; j++)
+        {printf("%s\n", smart_dumps(*j));}
+}
+
+void debug_map()
+{
+    mapping* m;
+    printf("BEGIN MAP DUMP\n");
+    for (m=mapstack; m<mapstackpointer; m++)
+        {printf("%s\n", smart_dumps(*(m->stk)));}
+}
+
 int main (int argc, char *argv[])
 #define ALL_OPTIONS "PStlkuae:s:m:i:"
 {
@@ -555,10 +599,12 @@ int main (int argc, char *argv[])
     {
         if (! MAPEMPTY)
         {
-            if (map_safe_peek()->itr)
+            if (! map_safe_peek()->fin)
                 {MAPNEXT();}
             else
                 {MAPPOP();}
+            if (MAPEMPTY)
+                {break;}
         }
         while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
         {
@@ -614,6 +660,7 @@ int main (int argc, char *argv[])
                     break;
                 case 'a':  // across
                     MAPPUSH();
+                    MAPNEXT();
                     output = 0;
                     break;
                 case 'P':  // not a manipulation
@@ -627,7 +674,7 @@ int main (int argc, char *argv[])
             }
         }
         if (output && stackpointer != stack)
-            {printf("%s\n", smart_dumps(POP));}
+            {printf("%s\n", smart_dumps(PEEK));}
     } while (! MAPEMPTY);
 }
 
