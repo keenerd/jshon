@@ -22,6 +22,7 @@
     -e(xtract) index -> only works on dict, list
     -s(tring) value -> adds json escapes
     -u(nstring) -> removes json escapes
+    -p(op) -> pop/undo the last manipulation
     -m(odify) index,value -> only works on dict, list
                               index can be append, value can be remove
                               no commas in index
@@ -217,8 +218,8 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     #define JSON_WHITE(x) ((x) == 0x20 || (x) == 0x9 || (x) == 0xA || (x) == 0xD)
     #define JSON_IDENTIFIER(x) (isalnum(x) || (x) == '$' || (x) == '_' || (x) == '.')
 
-    char *first = in;
-    char *last = in + strlen(in) - 1;
+    char* first = in;
+    char* last = in + strlen(in) - 1;
 
     // skip over whitespace and semicolons at the end
     while (first < last && (JSON_WHITE(*last) || *last == ';'))
@@ -532,7 +533,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PStlkuae:s:m:i:"
+#define ALL_OPTIONS "PStlkupae:s:m:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -628,6 +629,11 @@ int main (int argc, char *argv[])
                 case 'u':  // unescape string
                     printf("%s\n", unstring(PEEK));
                     output = 0;
+                    break;
+                case 'p':  // pop stack
+                    json = POP;
+                    json_decref(json);
+                    output = 1;
                     break;
                 case 's':  // escape string
                     arg1 = (char*) strdup(optarg);

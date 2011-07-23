@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[t|l|k|u|a] -s value -[e|i] index -m index,value
+-[t|l|k|u|p|a] -s value -[e|i] index -m index,value
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk.
@@ -67,6 +67,11 @@ in the middle of them.
 (unstring) returns a decoded string.  Only works on string.
 .Pp
 \&  jshon -e b -e 3 -u -> none
+.Pp
+.It Cm -p
+(pop) pops the last manipulation from the stack, rewinding the history.  Useful for extracting multiple values from one object.
+.Pp
+\& jshon -e c -e d -u -p -e e -u -> 4 5
 .Pp
 .It Cm -m index,value
 (modify) edits an element in a list or a dict.  Value must be escaped.  If value is remove, delete the index.  If value is true/false/null, insert the primitive type.  Quoting strings is optional, except for the ambiguous case of remove/true/false/null.  Lists support several magic indexes.  Negative numbers wrap around the back, and append will add a new element after the last.
