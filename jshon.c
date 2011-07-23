@@ -15,6 +15,7 @@
 
     -P -> detect and ignore JSONP wrapper, if present
     -S -> sort keys when writing objects
+    -Q -> quiet, suppress stderr
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -55,6 +56,8 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 }
 #endif
 
+int quiet = 0;
+
 // stack depth is limited by maxargs
 // if you need more depth, use a SAX parser
 #define STACKDEPTH 128
@@ -66,7 +69,8 @@ void PUSH(json_t* v)
 {
     if (stackpointer >= &stack[STACKDEPTH])
     {
-        fprintf(stderr, "internal error: stack overflow\n");
+        if (!quiet)
+            {fprintf(stderr, "internal error: stack overflow\n");}
         exit(1);
     }
     *stackpointer++ = v;
@@ -76,7 +80,8 @@ json_t** stack_safe_peek()
 {
     if (stackpointer < &stack[1])
     {
-        fprintf(stderr, "internal error: stack underflow\n");
+        if (!quiet)
+            {fprintf(stderr, "internal error: stack underflow\n");}
         exit(1);
     }
     return stackpointer - 1;
@@ -102,7 +107,8 @@ mapping* map_safe_peek()
 {
     if (mapstackpointer < &mapstack[1])
     {
-        fprintf(stderr, "internal error: mapstack underflow\n");
+        if (!quiet)
+            {fprintf(stderr, "internal error: mapstack underflow\n");}
         exit(1);
     }
     return mapstackpointer - 1;
@@ -112,7 +118,8 @@ void MAPPUSH()
 {
     if (mapstackpointer >= &mapstack[STACKDEPTH])
     {
-        fprintf(stderr, "internal error: mapstack overflow\n");
+        if (!quiet)
+            {fprintf(stderr, "internal error: mapstack overflow\n");}
         exit(1);
     }
     mapstackpointer++;
@@ -128,7 +135,8 @@ void MAPPUSH()
             map_safe_peek()->lin = 0;
             break;
         default:
-            fprintf(stderr, "type not mappable\n");
+            if (!quiet)
+                {fprintf(stderr, "type not mappable\n");}
             exit(1);
     }
 }
@@ -153,7 +161,8 @@ void MAPNEXT()
                 {map_safe_peek()->fin = 1;}
             break;
         default:
-            fprintf(stderr, "type not mappable\n");
+            if (!quiet)
+                {fprintf(stderr, "type not mappable\n");}
             exit(1);
     }
 }
@@ -314,7 +323,8 @@ char* smart_dumps(json_t* json)
         case JSON_NULL:
             return "null";
         default:
-            fprintf(stderr, "internal error: unknown type\n");
+            if (!quiet)
+                {fprintf(stderr, "internal error: unknown type\n");}
             exit(1);
     }
 }
@@ -351,7 +361,8 @@ char* pretty_type(json_t* json)
         case JSON_NULL:
             return "null";
         default:
-            fprintf(stderr, "internal error: unknown type\n");
+            if (!quiet)
+                {fprintf(stderr, "internal error: unknown type\n");}
             exit(1);
     }
 }
@@ -372,7 +383,8 @@ int length(json_t* json)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            fprintf(stderr, "type %s has no length\n", pretty_type(json));
+            if (!quiet)
+                {fprintf(stderr, "type %s has no length\n", pretty_type(json));}
             exit(1);
     }
 }
@@ -393,11 +405,15 @@ void keys(json_t* json)
 
     if (!json_is_object(json))
     {
-        fprintf(stderr, "type %s has no keys\n", pretty_type(json));
+        if (!quiet)
+            {fprintf(stderr, "type %s has no keys\n", pretty_type(json));}
         exit(1);
     }
     if (!((keys = malloc(sizeof(char*) * json_object_size(json)))))
-        {fprintf(stderr, "ERROR: out of memory\n"); exit(1);}
+    {
+        if (!quiet)
+            {fprintf(stderr, "ERROR: out of memory\n"); exit(1);}
+    }
 
     iter = json_object_iter(json);
     n = 0;
@@ -420,7 +436,8 @@ const char* unstring(json_t* json)
 {
     if (!json_is_string(json))
     {
-        fprintf(stderr, "type %s is not string\n", pretty_type(json));
+        if (!quiet)
+            {fprintf(stderr, "type %s is not string\n", pretty_type(json));}
         exit(1);
     }
     return json_string_value(json);
@@ -447,7 +464,8 @@ json_t* extract(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
+            if (!quiet)
+                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
             exit(1);
     }
 }
@@ -476,7 +494,8 @@ json_t* delete(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
+            if (!quiet)
+                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
             exit(1);
     }
 }
@@ -511,7 +530,8 @@ json_t* update(json_t* json, char* key, char* j_string)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            fprintf(stderr, "type %s has no elements\n", pretty_type(json));
+            if (!quiet)
+                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
             exit(1);
     }
 }
@@ -533,7 +553,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PStlkupae:s:m:i:"
+#define ALL_OPTIONS "PSQtlkupae:s:m:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -558,6 +578,9 @@ int main (int argc, char *argv[])
             case 'S':
                 dumps_flags |= JSON_SORT_KEYS;
                 break;
+            case 'Q':
+                quiet = 1;
+                break;
             default:
                 break;
         }
@@ -571,7 +594,8 @@ int main (int argc, char *argv[])
     content = read_stdin();
     if (!content[0])
     {
-        fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");
+        if (!quiet)
+            {fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");}
         exit(1);
     }
 
@@ -587,11 +611,13 @@ int main (int argc, char *argv[])
             {jsonp_status = (jsonp_rows||jsonp_cols) ? "(jsonp detected) " : "(jsonp not detected) ";}
 
 #if JANSSON_MAJOR_VERSION < 2
-        fprintf(stderr, "ERROR: json %sread error, line %0d: %s\n",
-            jsonp_status, error.line + jsonp_rows, error.text);
+        if (!quiet)
+            {fprintf(stderr, "ERROR: json %sread error, line %0d: %s\n",
+                 jsonp_status, error.line + jsonp_rows, error.text);}
 #else
-        fprintf(stderr, "ERROR: json %sread error, line %0d column %0d: %s\n",
-            jsonp_status, error.line + jsonp_rows, error.column + jsonp_cols, error.text);
+        if (!quiet)
+            {fprintf(stderr, "ERROR: json %sread error, line %0d column %0d: %s\n",
+                jsonp_status, error.line + jsonp_rows, error.column + jsonp_cols, error.text);}
 #endif
         exit(1);
     }
@@ -674,10 +700,14 @@ int main (int argc, char *argv[])
                     break;
                 case 'P':  // not a manipulation
                 case 'S': 
+                case 'Q':
                     break;
                 default:
-                    fprintf(stderr, "Unknown command line option...\n");
-                    fprintf(stderr, "Valid: -P -S -t -l -k -u -e -s -m -i -a \n");
+                    if (!quiet)
+                    {
+                        fprintf(stderr, "Unknown command line option...\n");
+                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -m -i -a \n");
+                    }
                     exit(2);
                     break;
             }

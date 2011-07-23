@@ -1,5 +1,5 @@
 .\" man 7 groff_mdoc  Best resource ever
-.Dd July 20, 2011
+.Dd July 23, 2011
 .Dt JSHON \&1 "Jshon Manual"
 .Os " "
 .Sh NAME
@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[t|l|k|u|p|a] -s value -[e|i] index -m index,value
+-[P|S|Q|t|l|k|u|p|a] -s value -[e|i] index -m index,value
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk.
@@ -84,6 +84,20 @@ in the middle of them.
 \&  jshon -e a -i a -> the orginal json
 .br
 \&  jshon -e b -m 2,remove -m 2,remove -m append,1.2 -i b -> {"a":1, "b":[true,false,1.2], "c":{"d":4,"e":5}}
+.
+.Pp
+.Sh NON-MANIPULATION
+There are several meta-options that do not directly edit json.  These are called at most once per invocation.
+.Pp
+.Bl -tag -width ".." -compact
+.It Cm -P
+(jsonp) strips a jsonp callback before continuing normally.
+.Pp
+.It Cm -S
+(sort) returns json sorted by key, instead of the original ordering.
+.Pp
+.It Cm -Q
+(quiet) disables error reporting on stderr, so you don't have to sprinkle "2> /dev/null" throughout your script.
 .Pp
 .Sh AUTHORS
 .An -nosplit
