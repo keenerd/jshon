@@ -1,6 +1,6 @@
 # Maintainer: Kyle Keen <keenerd@gmail.com>
 pkgname=jshon
-pkgver=20110306
+pkgver=20110803
 pkgrel=1
 pkgdesc="A json parser for the shell."
 arch=('i686' 'x86_64')
@@ -10,7 +10,7 @@ depends=('jansson')
 makedepends=()
 optdepends=()
 source=(http://kmkeen.com/$pkgname/$pkgname-$pkgver.tar.gz)
-md5sums=('a047a6281147956a9422a25fdd97adf3')
+md5sums=('d14f012d6e9acf2c0ccc355fcd53c6fd')
 
 build() {
   cd "$srcdir/$pkgname"

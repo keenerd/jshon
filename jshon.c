@@ -22,7 +22,7 @@
     -k(eys) -> only works on dict
     -e(xtract) index -> only works on dict, list
     -s(tring) value -> adds json escapes
-    -u(nstring) -> removes json escapes
+    -u(nstring) -> removes json escapes, display value
     -p(op) -> pop/undo the last manipulation
     -m(odify) index,value -> only works on dict, list
                               index can be append, value can be remove
@@ -434,13 +434,23 @@ void keys(json_t* json)
 
 const char* unstring(json_t* json)
 {
-    if (!json_is_string(json))
+    switch (json_typeof(json))
     {
-        if (!quiet)
-            {fprintf(stderr, "type %s is not string\n", pretty_type(json));}
-        exit(1);
+        case JSON_STRING:
+            return json_string_value(json);
+        case JSON_INTEGER:
+        case JSON_REAL:
+        case JSON_TRUE:
+        case JSON_FALSE:
+        case JSON_NULL:
+            return smart_dumps(json);
+        case JSON_OBJECT:
+        case JSON_ARRAY:
+        default:
+            if (!quiet)
+                {fprintf(stderr, "type %s is not simple\n", pretty_type(json));}
+            exit(1);
     }
-    return json_string_value(json);
 }
 
 json_t* extract(json_t* json, char* key)

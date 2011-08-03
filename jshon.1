@@ -64,7 +64,7 @@ in the middle of them.
 \&  jshon -s "back\[rs]slash" -> "back\[rs]\[rs]slash"
 .Pp
 .It Cm -u
-(unstring) returns a decoded string.  Only works on string.
+(unstring) returns a decoded string.  Only works on simple type: string, int, real, boolean, null.
 .Pp
 \&  jshon -e b -e 3 -u -> none
 .Pp
