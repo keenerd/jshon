@@ -28,11 +28,10 @@
     -n(onstring) value -> creates true/false/null/array/object/int/float
     -u(nstring) -> removes json escapes, display value
     -p(op) -> pop/undo the last manipulation
-    -m(odify) index,value -> only works on dict, list
-                              index can be append, value can be remove
-                              no commas in index
-    -i(nsert) index -> opposite of extract, rebuilds json
-                       "-e field -i field" returns original structure
+    -d(elete) index -> remove an element from an object or array
+    -i(nsert) index -> opposite of extract, merges json up the stack
+                       objects will overwrite, arrays will insert
+                       arrays can take negative numbers or 'append'
     -a(cross) -> iterate across the current dict or list
 
     Multiple commands can be chained.
@@ -473,7 +472,7 @@ const char* unstring(json_t* json)
         case JSON_OBJECT:
         case JSON_ARRAY:
         default:
-            json_err("is not simple", json);
+            json_err("is not simple/printable", json);
             exit(1);
     }
 }
@@ -499,7 +498,7 @@ json_t* extract(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            json_err("has no elements", json);
+            json_err("has no elements to extract", json);
             exit(1);
     }
 }
@@ -528,7 +527,7 @@ json_t* delete(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            json_err("has no elements", json);
+            json_err("cannot lose elements", json);
             exit(1);
     }
 }
@@ -563,7 +562,7 @@ json_t* update(json_t* json, char* key, char* j_string)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            json_err("has no elements", json);
+            json_err("cannot gain elements", json);
             exit(1);
     }
 }
@@ -585,11 +584,10 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQtlkupae:s:n:m:i:"
+#define ALL_OPTIONS "PSQtlkupae:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
-    char* arg2 = "";
     char* j_string = "";
     json_t* json = NULL;
     json_error_t error;
@@ -705,22 +703,16 @@ int main (int argc, char *argv[])
                     PUSH(nonstring(arg1));
                     output = 1;
                     break;
-                case 'm':  // modify
-                    arg2 = (char*) strdup(optarg);
-                    arg1 = strsep(&arg2, ",");
-                    output = 1;
-                    json = POP;
-                    if (!strcmp(arg2, "remove"))
-                    {
-                        PUSH(delete(json, arg1));
-                        break;
-                    }
-                    PUSH(update(json, arg1, arg2));
-                    break;
                 case 'e':  // extract
                     arg1 = (char*) strdup(optarg);
                     json = PEEK;
                     PUSH(extract(json_deep_copy(json), arg1));
+                    output = 1;
+                    break;
+                case 'd':  // delete
+                    arg1 = (char*) strdup(optarg);
+                    json = POP;
+                    PUSH(delete(json, arg1));
                     output = 1;
                     break;
                 case 'i':  // insert
@@ -745,7 +737,7 @@ int main (int argc, char *argv[])
                     if (!quiet)
                     {
                         fprintf(stderr, "Unknown command line option...\n");
-                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -n -m -i -a \n");
+                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -n -d -i -a \n");
                     }
                     exit(2);
                     break;
