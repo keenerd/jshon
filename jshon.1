@@ -1,5 +1,5 @@
 .\" man 7 groff_mdoc  Best resource ever
-.Dd July 23, 2011
+.Dd November 4, 2011
 .Dt JSHON \&1 "Jshon Manual"
 .Os " "
 .Sh NAME
@@ -7,26 +7,28 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|t|l|k|u|p|a] -s value -[e|i] index -m index,value
+-[P|S|Q|t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
-parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk.
+parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight parsers made from perl/python.
 .Pp
 .Nm
-loads json text from stdin, performs actions, then dumps to stdout.  Some of the options output json, others output plain text summaries.  Because Bash has very poor nested datastructures,
+loads json text from stdin, performs actions, then displays the last action on stdout.  Some of the options output json, others output plain text summaries.  Because Bash has very poor nested datastructures,
 .Nm
-does not return the JSON as a native bash object.  Instead,
+does not return the JSON as a native object as a typical library would.  Instead,
 .Nm
-retains a history of edits in a stack, and you manipulate the JSON element on the top of the stack.  This increases memory use compared to other parsers, but is not too bad.  Actions should be chained sequentially to reduce calls.
+retains a history of edits in a stack, and you manipulate the topmost JSON element.  This increases memory use compared to other parsers, but only in pathological cases.
 .
 .Sh ACTIONS
-Each action takes the form of a short option.  Some require arguments.  All examples use this json sample:
+Each action takes the form of a short option.  Some require arguments.  While many instances of 
+.Nm
+can be piped through each other, actions should be chained sequentially to reduce calls.  All examples use this json sample:
 .Pp
 \&  {"a":1,"b":[true,false,null,"none"],"c":{"d":4,"e":5}}
 .br
 \&  jshon [actions] < sample.json
 .Pp
-Most common uses will only need several
+Most common read-only uses will only need several
 .Nm \-e 
 actions and one
 .Nm \-a
@@ -59,12 +61,15 @@ in the middle of them.
 \&  jshon -e b -a -t -> bool bool null string
 .Pp
 .It Cm -s value
-(string) returns a json encoded string.  Ignores stdin.
+(string) returns a json encoded string.  Can also be (-i)nserted to an existing structure.
 .Pp
 \&  jshon -s "back\[rs]slash" -> "back\[rs]\[rs]slash"
 .Pp
+.It Cm -n value
+(nonstring/number) returns a json encoded simple element.  Can also be (-i)nserted to an existing structure.  Valid values are 'true', 'false', 'none', integers and floats.
+.Pp
 .It Cm -u
-(unstring) returns a decoded string.  Only works on simple type: string, int, real, boolean, null.
+(unstring) returns a decoded string.  Only works on simple types: string, int, real, boolean, null.
 .Pp
 \&  jshon -e b -e 3 -u -> none
 .Pp
@@ -73,21 +78,25 @@ in the middle of them.
 .Pp
 \& jshon -e c -e d -u -p -e e -u -> 4 5
 .Pp
-.It Cm -m index,value
-(modify) edits an element in a list or a dict.  Value must be escaped.  If value is remove, delete the index.  If value is true/false/null, insert the primitive type.  Quoting strings is optional, except for the ambiguous case of remove/true/false/null.  Lists support several magic indexes.  Negative numbers wrap around the back, and append will add a new element after the last.
+.It Cm -d index
+(delete) removes an item in an array or object.  Negative array indexes will wrap around.
 .Pp
-\&  jshon -m a,first -> {"a":"first", ...}
+\&  json -d b -> {"a":1,"c":{"d":4,"e":5}}
 .Pp
 .It Cm -i index
-(insert) is complicated.  It is the reverse of extract.  Extract saves a copy of the json on a stack.  Insert pops json from the stack, and inserts that bit of json into the new top of the stack.  Use extract to dive into the json tree, modify to change something, and insert to push the changes back up the tree.
+(insert) is complicated.  It is the reverse of extract.  Extract puts a json sub-element on the stack.  Insert removes a sub-element from the stack, and inserts that bit of json into the larger array/object underneath.  Use extract to dive into the json tree, delete to remove something, (non)string to add something, and insert to push the changes back up the tree.
+.Pp
+Arrays are handled in a special manner.  Passing integers will insert a value without overwriting.  Negative integers are acceptable, as is the string 'append'.  To overwrite a value in an array: delete the index,
+.Nm \-n/s
+the new value, and then insert at the index.
 .Pp
 \&  jshon -e a -i a -> the orginal json
 .br
-\&  jshon -e b -m 2,remove -m 2,remove -m append,1.2 -i b -> {"a":1, "b":[true,false,1.2], "c":{"d":4,"e":5}}
+\&  jshon -s one -i a -> {"a":"one", ...}
 .
 .Pp
 .Sh NON-MANIPULATION
-There are several meta-options that do not directly edit json.  These are called at most once per invocation.
+There are several meta-options that do not directly edit json.  Call these at most once per invocation.
 .Pp
 .Bl -tag -width ".." -compact
 .It Cm -P
@@ -98,6 +107,14 @@ There are several meta-options that do not directly edit json.  These are called
 .Pp
 .It Cm -Q
 (quiet) disables error reporting on stderr, so you don't have to sprinkle "2> /dev/null" throughout your script.
+.Pp
+.Sh OTHER TOOLS
+.Nm
+always outputs one field per line.  Many unix tools expect multiple tab separated fields per line.  Pipe the output through 'paste' to fix this.  However, paste can not handle empty lines so pad those with a placeholder.  Here is an example:
+.Pp
+\&  jshon ... | sed 's/^$/-/' | paste -d '\\t\\t\\n'
+.Pp
+This replaces blanks with '-' and merges every three lines into one.
 .Pp
 .Sh AUTHORS
 .An -nosplit
@@ -110,5 +127,5 @@ with patches from
 and
 .An AndrewF .
 .Sh BUGS
-Numerous!  There are no stack over/underflow checks.  Forward slashes are not escaped.  Object indexes with commas are broken.  On any error it exits without saying why.  Documentation is very brief.
+Numerous!  Forward slashes are not escaped.  Object indexes with commas are broken.  Documentation is brief.
 
