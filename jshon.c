@@ -38,7 +38,8 @@
     Entire json is loaded into memory.
     -e/-a copies and stores on a stack.
     Could use up a lot of memory, usually does not.
-    -m is really hacky, consider merging to -i
+    (Copies could be avoided without worrying about circ refs,
+    but adding 'swap' breaks that proof.)
 */
 
 
@@ -89,7 +90,7 @@ void PUSH(json_t* json)
     if (stackpointer >= &stack[STACKDEPTH])
         {err("internal error: stack overflow");}
     if (json == NULL)
-        {arg_err("parse error: illegal operation on arg %i, \"%s\"");}
+        {arg_err("parse error: bad json on arg %i, \"%s\"");}
     *stackpointer++ = json;
 }
 
@@ -140,7 +141,7 @@ void MAPPUSH()
             map_safe_peek()->lin = 0;
             break;
         default:
-            err("type not mappable");
+            err("parse error: type not mappable");
     }
 }
 
@@ -164,7 +165,7 @@ void MAPNEXT()
                 {map_safe_peek()->fin = 1;}
             break;
         default:
-            err("type not mappable");
+            err("parse error: type not mappable");
     }
 }
 
@@ -435,15 +436,15 @@ json_t* nonstring(char* arg)
 {
     json_t* temp;
     char* endptr;
-    if (!strcmp(arg, "null"))
+    if (!strcmp(arg, "null") || !strcmp(arg, "n"))
         {return json_null();}
-    if (!strcmp(arg, "true"))
+    if (!strcmp(arg, "true") || !strcmp(arg, "t"))
         {return json_true();}
-    if (!strcmp(arg, "false"))
+    if (!strcmp(arg, "false") || !strcmp(arg, "f"))
         {return json_false();}
-    if (!strcmp(arg, "array"))
+    if (!strcmp(arg, "array") || !strcmp(arg, "[]"))
         {return json_array();}
-    if (!strcmp(arg, "object"))
+    if (!strcmp(arg, "object") || !strcmp(arg, "{}"))
         {return json_object();}
     errno = 0;
     temp = json_integer(strtol(arg, &endptr, 10));
@@ -453,7 +454,7 @@ json_t* nonstring(char* arg)
     temp = json_real(strtod(arg, &endptr));
     if (!errno && *endptr=='\0')
         {return temp;}
-    arg_err("parse error: illegal operation on arg %i, \"%s\"");
+    arg_err("parse error: illegal nonstring on arg %i, \"%s\"");
     exit(1);
 }
 
@@ -479,17 +480,24 @@ const char* unstring(json_t* json)
 
 json_t* extract(json_t* json, char* key)
 {
-    int i;
+    int i, s;
+    json_t* temp;
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
-            return json_object_get(json, key);
+            temp = json_object_get(json, key);
+            if (temp == NULL)
+                {break;}
+            return temp;
         case JSON_ARRAY:
+            s = json_array_size(json);
+            if (s == 0)
+                {break;}
             i = atoi(key);
             while (i < 0)
-                {i += json_array_size(json);}
-            while ((unsigned)i >= json_array_size(json))
-                {i -= json_array_size(json);}
+                {i += s;}
+            while (i >= s)
+                {i -= s;}
             return json_array_get(json, i);
         case JSON_STRING:
         case JSON_INTEGER:
@@ -498,26 +506,30 @@ json_t* extract(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            json_err("has no elements to extract", json);
-            exit(1);
+            break;
     }
+    json_err("has no elements to extract", json);
+    exit(1);
 }
 
 json_t* delete(json_t* json, char* key)
 // no error checking
 {
-    int i;
+    int i, s;
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
             json_object_del(json, key);
             return json;
         case JSON_ARRAY:
+            s = json_array_size(json);
+            if (s == 0)
+                {return json;}
             i = atoi(key);
             while (i < 0)
-                {i += json_array_size(json);}
-            while ((unsigned)i >= json_array_size(json))
-                {i -= json_array_size(json);}
+                {i += s;}
+            while (i>=s && i>0)
+                {i -= s;}
             json_array_remove(json, i);
             return json;
         case JSON_STRING:
@@ -535,7 +547,7 @@ json_t* delete(json_t* json, char* key)
 json_t* update(json_t* json, char* key, char* j_string)
 // no error checking
 {
-    int i;
+    int i, s;
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
@@ -549,10 +561,13 @@ json_t* update(json_t* json, char* key, char* j_string)
             }
             // otherwise, insert
             i = atoi(key);
+            s = json_array_size(json);
+            if (s == 0)
+                {i = 0;}
             while (i < 0)
-                {i += json_array_size(json);}
-            while ((unsigned)i >= json_array_size(json))
-                {i -= json_array_size(json);}
+                {i += s;}
+            while (i>=s && i>0)
+                {i -= s;}
             json_array_insert(json, i, smart_loads(j_string));
             return json;
         case JSON_STRING:
@@ -613,7 +628,22 @@ int main (int argc, char *argv[])
             case 'Q':
                 quiet = 1;
                 break;
+            case 't':
+            case 'l':
+            case 'k':
+            case 'u':
+            case 'p':
+            case 'e':
+            case 's':
+            case 'n':
+            case 'd':
+            case 'i':
+            case 'a':
+                break;
             default:
+                if (!quiet)
+                    {fprintf(stderr, "Valid: -[P|S|Q|t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                exit(2);
                 break;
         }
     }
@@ -734,11 +764,6 @@ int main (int argc, char *argv[])
                 case 'Q':
                     break;
                 default:
-                    if (!quiet)
-                    {
-                        fprintf(stderr, "Unknown command line option...\n");
-                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -n -d -i -a \n");
-                    }
                     exit(2);
                     break;
             }
