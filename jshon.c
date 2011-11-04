@@ -57,6 +57,8 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 }
 #endif
 
+int dumps_flags = JSON_INDENT(1);
+
 // for error reporting
 int quiet = 0;
 char** g_argv;
@@ -288,7 +290,6 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
 }
 
 
-int dumps_flags = JSON_INDENT(1);
 
 char* smart_dumps(json_t* json)
 // json_dumps is broken on simple types
@@ -587,6 +588,7 @@ int main (int argc, char *argv[])
     char* arg2 = "";
     char* j_string = "";
     json_t* json;
+    json_error_t error;
     int output = 1;  // flag if json should be printed
     int optchar;
     int jsonp = 0;   // flag if we should tolerate JSONP wrapping
@@ -621,14 +623,13 @@ int main (int argc, char *argv[])
 
     content = read_stdin();
     if (!content[0])
-        {err("user error: nothing to read on stdin");}
+        {err("parse error: nothing to read on stdin");}
 
     if (jsonp)
         {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
 
-    json_error_t error;
-    PUSH(compat_json_loads(content, &error));
-    if (!PEEK)
+    json = compat_json_loads(content, &error);
+    if (!json)
     {
         const char *jsonp_status = "";
         if (jsonp)
@@ -636,15 +637,16 @@ int main (int argc, char *argv[])
 
 #if JANSSON_MAJOR_VERSION < 2
         if (!quiet)
-            {fprintf(stderr, "ERROR: json %sread error, line %0d: %s\n",
+            {fprintf(stderr, "json %sread error: line %0d: %s\n",
                  jsonp_status, error.line + jsonp_rows, error.text);}
 #else
         if (!quiet)
-            {fprintf(stderr, "ERROR: json %sread error, line %0d column %0d: %s\n",
+            {fprintf(stderr, "json %sread error: line %0d column %0d: %s\n",
                 jsonp_status, error.line + jsonp_rows, error.column + jsonp_cols, error.text);}
 #endif
         exit(1);
     }
+    PUSH(json);
 
     do
     {
