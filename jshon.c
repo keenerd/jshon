@@ -25,7 +25,7 @@
     -k(eys) -> only works on dict
     -e(xtract) index -> only works on dict, list
     -s(tring) value -> adds json escapes
-    -n(onstring) value -> creates true/false/null/int/float
+    -n(onstring) value -> creates true/false/null/array/object/int/float
     -u(nstring) -> removes json escapes, display value
     -p(op) -> pop/undo the last manipulation
     -m(odify) index,value -> only works on dict, list
@@ -442,6 +442,10 @@ json_t* nonstring(char* arg)
         {return json_true();}
     if (!strcmp(arg, "false"))
         {return json_false();}
+    if (!strcmp(arg, "array"))
+        {return json_array();}
+    if (!strcmp(arg, "object"))
+        {return json_object();}
     errno = 0;
     temp = json_integer(strtol(arg, &endptr, 10));
     if (!errno && *endptr=='\0')
@@ -587,7 +591,7 @@ int main (int argc, char *argv[])
     char* arg1 = "";
     char* arg2 = "";
     char* j_string = "";
-    json_t* json;
+    json_t* json = NULL;
     json_error_t error;
     int output = 1;  // flag if json should be printed
     int optchar;
@@ -622,14 +626,16 @@ int main (int argc, char *argv[])
 
 
     content = read_stdin();
-    if (!content[0])
-        {err("parse error: nothing to read on stdin");}
+    if (!content[0] && !quiet)
+        {fprintf(stderr, "warning: nothing to read on stdin\n");}
 
     if (jsonp)
         {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
 
-    json = compat_json_loads(content, &error);
-    if (!json)
+    if (content[0])
+        {json = compat_json_loads(content, &error);}
+
+    if (!json && content[0])
     {
         const char *jsonp_status = "";
         if (jsonp)
@@ -646,7 +652,9 @@ int main (int argc, char *argv[])
 #endif
         exit(1);
     }
-    PUSH(json);
+
+    if (json)
+        {PUSH(json);}
 
     do
     {
