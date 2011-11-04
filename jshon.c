@@ -10,6 +10,8 @@
 // MIT licensed, (c) 2011 Kyle Keen <keenerd@gmail.com>
 
 /*
+    build with gcc -o jshon jshon.c -ljansson
+
     stdin is always json
     stdout is always json (except for -u, -t, -l, -k)
 
@@ -37,8 +39,6 @@
     Could use up a lot of memory, usually does not.
 */
 
-// build with gcc -o jshon jshon.c -ljansson
-
 
 // deal with API incompatibility between jansson 1.x and 2.x
 #ifndef JANSSON_MAJOR_VERSION
@@ -54,7 +54,9 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 }
 #endif
 
+// for error reporting
 int quiet = 0;
+char** g_argv;
 
 // stack depth is limited by maxargs
 // if you need more depth, use a SAX parser
@@ -63,31 +65,34 @@ int quiet = 0;
 json_t* stack[STACKDEPTH];
 json_t** stackpointer = stack;
 
+void err(char* message)
+// also see arg_err() and json_err() below
+{
+    if (!quiet)
+        {fprintf(stderr, "%s\n", message);}
+    exit(1);
+}
+
+void arg_err(char* message)
+{
+    char* temp;
+    asprintf(&temp, message, optind-1, g_argv[optind-1]);
+    err(temp);
+}
+
 void PUSH(json_t* json)
 {
     if (stackpointer >= &stack[STACKDEPTH])
-    {
-        if (!quiet)
-            {fprintf(stderr, "internal error: stack overflow\n");}
-        exit(1);
-    }
+        {err("internal error: stack overflow");}
     if (json == NULL)
-    {
-        if (!quiet)
-            {fprintf(stderr, "internal error: illegal operation\n");}
-        exit(1);
-    }
+        {arg_err("user error: illegal operation on arg %i, \"%s\"");}
     *stackpointer++ = json;
 }
 
 json_t** stack_safe_peek()
 {
     if (stackpointer < &stack[1])
-    {
-        if (!quiet)
-            {fprintf(stderr, "internal error: stack underflow\n");}
-        exit(1);
-    }
+        {err("internal error: stack underflow");}
     return stackpointer - 1;
 }
 
@@ -110,22 +115,14 @@ mapping* mapstackpointer = mapstack;
 mapping* map_safe_peek()
 {
     if (mapstackpointer < &mapstack[1])
-    {
-        if (!quiet)
-            {fprintf(stderr, "internal error: mapstack underflow\n");}
-        exit(1);
-    }
+        {err("internal error: mapstack underflow");}
     return mapstackpointer - 1;
 }
 
 void MAPPUSH()
 {
     if (mapstackpointer >= &mapstack[STACKDEPTH])
-    {
-        if (!quiet)
-            {fprintf(stderr, "internal error: mapstack overflow\n");}
-        exit(1);
-    }
+        {err("internal error: mapstack overflow");}
     mapstackpointer++;
     map_safe_peek()->stk = stack_safe_peek();
     map_safe_peek()->opt = optind;
@@ -139,9 +136,7 @@ void MAPPUSH()
             map_safe_peek()->lin = 0;
             break;
         default:
-            if (!quiet)
-                {fprintf(stderr, "type not mappable\n");}
-            exit(1);
+            err("type not mappable");
     }
 }
 
@@ -165,9 +160,7 @@ void MAPNEXT()
                 {map_safe_peek()->fin = 1;}
             break;
         default:
-            if (!quiet)
-                {fprintf(stderr, "type not mappable\n");}
-            exit(1);
+            err("type not mappable");
     }
 }
 
@@ -327,8 +320,7 @@ char* smart_dumps(json_t* json)
         case JSON_NULL:
             return "null";
         default:
-            if (!quiet)
-                {fprintf(stderr, "internal error: unknown type\n");}
+            err("internal error: unknown type");
             exit(1);
     }
 }
@@ -348,6 +340,8 @@ json_t* smart_loads(char* j_string)
 
 char* pretty_type(json_t* json)
 {
+    if (json == NULL)
+        {return "NULL";}
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
@@ -365,10 +359,16 @@ char* pretty_type(json_t* json)
         case JSON_NULL:
             return "null";
         default:
-            if (!quiet)
-                {fprintf(stderr, "internal error: unknown type\n");}
+            err("internal error: unknown type");
             exit(1);
     }
+}
+
+void json_err(char* message, json_t* json)
+{
+    char* temp;
+    asprintf(&temp, "parse error: type '%s' %s (arg %i)", pretty_type(json), message, optind-1);
+    err(temp);
 }
 
 int length(json_t* json)
@@ -387,8 +387,7 @@ int length(json_t* json)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            if (!quiet)
-                {fprintf(stderr, "type %s has no length\n", pretty_type(json));}
+            json_err("has no length", json);
             exit(1);
     }
 }
@@ -408,16 +407,9 @@ void keys(json_t* json)
     size_t i, n;
 
     if (!json_is_object(json))
-    {
-        if (!quiet)
-            {fprintf(stderr, "type %s has no keys\n", pretty_type(json));}
-        exit(1);
-    }
+        {json_err("has no keys", json);}
     if (!((keys = malloc(sizeof(char*) * json_object_size(json)))))
-    {
-        if (!quiet)
-            {fprintf(stderr, "ERROR: out of memory\n"); exit(1);}
-    }
+        {err("internal error: out of memory");}
 
     iter = json_object_iter(json);
     n = 0;
@@ -451,8 +443,7 @@ const char* unstring(json_t* json)
         case JSON_OBJECT:
         case JSON_ARRAY:
         default:
-            if (!quiet)
-                {fprintf(stderr, "type %s is not simple\n", pretty_type(json));}
+            json_err("is not simple", json);
             exit(1);
     }
 }
@@ -478,8 +469,7 @@ json_t* extract(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            if (!quiet)
-                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
+            json_err("has no elements", json);
             exit(1);
     }
 }
@@ -508,8 +498,7 @@ json_t* delete(json_t* json, char* key)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            if (!quiet)
-                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
+            json_err("has no elements", json);
             exit(1);
     }
 }
@@ -544,8 +533,7 @@ json_t* update(json_t* json, char* key, char* j_string)
         case JSON_FALSE:
         case JSON_NULL:
         default:
-            if (!quiet)
-                {fprintf(stderr, "type %s has no elements\n", pretty_type(json));}
+            json_err("has no elements", json);
             exit(1);
     }
 }
@@ -578,6 +566,7 @@ int main (int argc, char *argv[])
     int optchar;
     int jsonp = 0;   // flag if we should tolerate JSONP wrapping
     int jsonp_rows = 0, jsonp_cols = 0;   // rows+cols skipped over by JSONP prologue
+    g_argv = argv;
 
     // todo: get more jsonp stuff out of main
 
@@ -607,11 +596,7 @@ int main (int argc, char *argv[])
 
     content = read_stdin();
     if (!content[0])
-    {
-        if (!quiet)
-            {fprintf(stderr, "ERROR: json read error: nothing to read on stdin\n");}
-        exit(1);
-    }
+        {err("user error: nothing to read on stdin");}
 
     if (jsonp)
         {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
