@@ -34,9 +34,7 @@
     Multiple commands can be chained.
     Entire json is loaded into memory.
     -e/-a copies and stores on a stack.
-    Could use up a lot of memory.
-    No safety measures anywhere.
-
+    Could use up a lot of memory, usually does not.
 */
 
 // build with gcc -o jshon jshon.c -ljansson
@@ -65,7 +63,7 @@ int quiet = 0;
 json_t* stack[STACKDEPTH];
 json_t** stackpointer = stack;
 
-void PUSH(json_t* v)
+void PUSH(json_t* json)
 {
     if (stackpointer >= &stack[STACKDEPTH])
     {
@@ -73,7 +71,13 @@ void PUSH(json_t* v)
             {fprintf(stderr, "internal error: stack overflow\n");}
         exit(1);
     }
-    *stackpointer++ = v;
+    if (json == NULL)
+    {
+        if (!quiet)
+            {fprintf(stderr, "internal error: illegal operation\n");}
+        exit(1);
+    }
+    *stackpointer++ = json;
 }
 
 json_t** stack_safe_peek()
