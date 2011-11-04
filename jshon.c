@@ -6,6 +6,7 @@
 #include <sys/param.h>
 #include <unistd.h>
 #include <jansson.h>
+#include <errno.h>
 
 // MIT licensed, (c) 2011 Kyle Keen <keenerd@gmail.com>
 
@@ -24,6 +25,7 @@
     -k(eys) -> only works on dict
     -e(xtract) index -> only works on dict, list
     -s(tring) value -> adds json escapes
+    -n(onstring) value -> creates true/false/null/int/float
     -u(nstring) -> removes json escapes, display value
     -p(op) -> pop/undo the last manipulation
     -m(odify) index,value -> only works on dict, list
@@ -37,6 +39,7 @@
     Entire json is loaded into memory.
     -e/-a copies and stores on a stack.
     Could use up a lot of memory, usually does not.
+    -m is really hacky, consider merging to -i
 */
 
 
@@ -85,7 +88,7 @@ void PUSH(json_t* json)
     if (stackpointer >= &stack[STACKDEPTH])
         {err("internal error: stack overflow");}
     if (json == NULL)
-        {arg_err("user error: illegal operation on arg %i, \"%s\"");}
+        {arg_err("parse error: illegal operation on arg %i, \"%s\"");}
     *stackpointer++ = json;
 }
 
@@ -428,6 +431,28 @@ void keys(json_t* json)
     free(keys);
 }
 
+json_t* nonstring(char* arg)
+{
+    json_t* temp;
+    char* endptr;
+    if (!strcmp(arg, "null"))
+        {return json_null();}
+    if (!strcmp(arg, "true"))
+        {return json_true();}
+    if (!strcmp(arg, "false"))
+        {return json_false();}
+    errno = 0;
+    temp = json_integer(strtol(arg, &endptr, 10));
+    if (!errno && *endptr=='\0')
+        {return temp;}
+    errno = 0;
+    temp = json_real(strtod(arg, &endptr));
+    if (!errno && *endptr=='\0')
+        {return temp;}
+    arg_err("parse error: illegal operation on arg %i, \"%s\"");
+    exit(1);
+}
+
 const char* unstring(json_t* json)
 {
     switch (json_typeof(json))
@@ -555,7 +580,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQtlkupae:s:m:i:"
+#define ALL_OPTIONS "PSQtlkupae:s:n:m:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -660,9 +685,14 @@ int main (int argc, char *argv[])
                     json_decref(json);
                     output = 1;
                     break;
-                case 's':  // escape string
+                case 's':  // load string
                     arg1 = (char*) strdup(optarg);
                     PUSH(json_string(arg1));
+                    output = 1;
+                    break;
+                case 'n':  // load nonstring
+                    arg1 = (char*) strdup(optarg);
+                    PUSH(nonstring(arg1));
                     output = 1;
                     break;
                 case 'm':  // modify
@@ -705,7 +735,7 @@ int main (int argc, char *argv[])
                     if (!quiet)
                     {
                         fprintf(stderr, "Unknown command line option...\n");
-                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -m -i -a \n");
+                        fprintf(stderr, "Valid: -P -S -Q -t -l -k -u -p -e -s -n -m -i -a \n");
                     }
                     exit(2);
                     break;
