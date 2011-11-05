@@ -81,7 +81,10 @@ void err(char* message)
 void arg_err(char* message)
 {
     char* temp;
-    asprintf(&temp, message, optind-1, g_argv[optind-1]);
+    int i;
+    i = asprintf(&temp, message, optind-1, g_argv[optind-1]);
+    if (i == -1)
+        {err("internal error: out of memory");}
     err(temp);
 }
 
@@ -297,6 +300,7 @@ char* smart_dumps(json_t* json)
     char* temp;
     char* temp2;
     json_t* j2;
+    int i;
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
@@ -309,13 +313,19 @@ char* smart_dumps(json_t* json)
             j2 = json_array();
             json_array_append(j2, json);
             temp = json_dumps(j2, 0);
-            asprintf(&temp2, "%.*s", (signed)strlen(temp)-2, &temp[1]);
+            i = asprintf(&temp2, "%.*s", (signed)strlen(temp)-2, &temp[1]);
+            if (i == -1)
+                {err("internal error: out of memory");}
             return temp2;
         case JSON_INTEGER:
-            asprintf(&temp, "%ld", (long)json_integer_value(json));
+            i = asprintf(&temp, "%ld", (long)json_integer_value(json));
+            if (i == -1)
+                {err("internal error: out of memory");}
             return temp;
         case JSON_REAL:
-            asprintf(&temp, "%f", json_real_value(json));
+            i = asprintf(&temp, "%f", json_real_value(json));
+            if (i == -1)
+                {err("internal error: out of memory");}
             return temp;
         case JSON_TRUE:
             return "true";
@@ -335,7 +345,10 @@ json_t* smart_loads(char* j_string)
     json_t* json;
     json_error_t error;
     char *temp;
-    asprintf(&temp, "[%s]", j_string);
+    int i;
+    i = asprintf(&temp, "[%s]", j_string);
+    if (i == -1)
+        {err("internal error: out of memory");}
     json = compat_json_loads(temp, &error);
     if (!json)
         {return json_string(j_string);}
@@ -371,7 +384,10 @@ char* pretty_type(json_t* json)
 void json_err(char* message, json_t* json)
 {
     char* temp;
-    asprintf(&temp, "parse error: type '%s' %s (arg %i)", pretty_type(json), message, optind-1);
+    int i;
+    i = asprintf(&temp, "parse error: type '%s' %s (arg %i)", pretty_type(json), message, optind-1);
+    if (i == -1)
+        {err("internal error: out of memory");}
     err(temp);
 }
 
