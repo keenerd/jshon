@@ -19,6 +19,7 @@
     -P -> detect and ignore JSONP wrapper, if present
     -S -> sort keys when writing objects
     -Q -> quiet, suppress stderr
+    -V -> enable slower/safer pass-by-value
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -36,10 +37,23 @@
 
     Multiple commands can be chained.
     Entire json is loaded into memory.
-    -e/-a copies and stores on a stack.
+    -e/-a copies and stores on a stack with -V.
     Could use up a lot of memory, usually does not.
-    (Copies could be avoided without worrying about circ refs,
+    (For now we don't have to worry about circular refs,
     but adding 'swap' breaks that proof.)
+
+    Consider a golf mode with shortcuts for -e -a -u -p -l
+    -g 'results.*.Name.!.^.Version.!.^.Description.!'
+    -g 'data.children.*.data.url.!'
+    -g 'c.d.!.^.e.!'
+    (! on object/array does -l)
+    If you have keys with .!^* in them, use the normal options.
+    Implementing this is going to be a pain.
+    Maybe overwrite the original argv data?
+    Maybe two nested parse loops?
+
+    Consider being more permissive on errors, PUSHing nulls
+    when asked to do nonsense.  (with -A to abort on these)
 */
 
 
@@ -58,6 +72,7 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 #endif
 
 int dumps_flags = JSON_INDENT(1);
+int by_value = 0;
 
 // for error reporting
 int quiet = 0;
@@ -108,6 +123,13 @@ json_t** stack_safe_peek()
 #define POP        *((stackpointer = stack_safe_peek()))
 #define PEEK       *(stack_safe_peek())
 
+json_t* maybe_deep(json_t* json)
+{
+    if (by_value)
+        {return json_deep_copy(json);}
+    return json;
+}
+
 typedef struct
 {
     void*    itr;  // object iterator
@@ -156,13 +178,13 @@ void MAPNEXT()
     {
         case JSON_OBJECT:
             json_object_iter_key(map_safe_peek()->itr);
-            PUSH(json_deep_copy(json_object_iter_value(map_safe_peek()->itr)));
+            PUSH(maybe_deep(json_object_iter_value(map_safe_peek()->itr)));
             map_safe_peek()->itr = json_object_iter_next(*(map_safe_peek()->stk), map_safe_peek()->itr);
             if (!map_safe_peek()->itr)
                 {map_safe_peek()->fin = 1;}
             break;
         case JSON_ARRAY:
-            PUSH(json_deep_copy(json_array_get(*(map_safe_peek()->stk), map_safe_peek()->lin)));
+            PUSH(maybe_deep(json_array_get(*(map_safe_peek()->stk), map_safe_peek()->lin)));
             map_safe_peek()->lin++;
             if (map_safe_peek()->lin >= json_array_size(*(map_safe_peek()->stk)))
                 {map_safe_peek()->fin = 1;}
@@ -560,19 +582,19 @@ json_t* delete(json_t* json, char* key)
     }
 }
 
-json_t* update(json_t* json, char* key, char* j_string)
+json_t* update_native(json_t* json, char* key, json_t* j_value)
 // no error checking
 {
     int i, s;
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
-            json_object_set(json, key, smart_loads(j_string));
+            json_object_set(json, key, j_value);
             return json;
         case JSON_ARRAY:
             if (!strcmp(key, "append"))
             {
-                json_array_append(json, smart_loads(j_string));
+                json_array_append(json, j_value);
                 return json;
             }
             // otherwise, insert
@@ -584,7 +606,7 @@ json_t* update(json_t* json, char* key, char* j_string)
                 {i += s;}
             while (i>=s && i>0)
                 {i -= s;}
-            json_array_insert(json, i, smart_loads(j_string));
+            json_array_insert(json, i, j_value);
             return json;
         case JSON_STRING:
         case JSON_INTEGER:
@@ -596,6 +618,11 @@ json_t* update(json_t* json, char* key, char* j_string)
             json_err("cannot gain elements", json);
             exit(1);
     }
+}
+
+json_t* update(json_t* json, char* key, char* j_string)
+{
+    return update_native(json, key, smart_loads(j_string));
 }
 
 void debug_stack(int optchar)
@@ -615,12 +642,12 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQtlkupae:s:n:d:i:"
+#define ALL_OPTIONS "PSQVtlkupae:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
-    char* j_string = "";
     json_t* json = NULL;
+    json_t* jval = NULL;
     json_error_t error;
     int output = 1;  // flag if json should be printed
     int optchar;
@@ -644,6 +671,9 @@ int main (int argc, char *argv[])
             case 'Q':
                 quiet = 1;
                 break;
+            case 'V':
+                by_value = 1;
+                break;
             case 't':
             case 'l':
             case 'k':
@@ -658,7 +688,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
                 exit(2);
                 break;
         }
@@ -736,7 +766,8 @@ int main (int argc, char *argv[])
                     break;
                 case 'p':  // pop stack
                     json = POP;
-                    json_decref(json);
+                    if (by_value)
+                        {json_decref(json);}
                     output = 1;
                     break;
                 case 's':  // load string
@@ -752,7 +783,7 @@ int main (int argc, char *argv[])
                 case 'e':  // extract
                     arg1 = (char*) strdup(optarg);
                     json = PEEK;
-                    PUSH(extract(json_deep_copy(json), arg1));
+                    PUSH(extract(maybe_deep(json), arg1));
                     output = 1;
                     break;
                 case 'd':  // delete
@@ -762,22 +793,22 @@ int main (int argc, char *argv[])
                     output = 1;
                     break;
                 case 'i':  // insert
-                    // pointless string conversion
-                    // saves writing update_native()
                     arg1 = (char*) strdup(optarg);
-                    j_string = smart_dumps(POP);
+                    jval = POP;
                     json = POP;
-                    PUSH(update(json, arg1, j_string));
+                    PUSH(update_native(json, arg1, jval));
                     output = 1;
                     break;
                 case 'a':  // across
+                    // something about -a is not mappable?
                     MAPPUSH();
                     MAPNEXT();
                     output = 0;
                     break;
-                case 'P':  // not a manipulation
+                case 'P':  // not manipulations
                 case 'S': 
                 case 'Q':
+                case 'V':
                     break;
                 default:
                     exit(2);
