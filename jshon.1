@@ -1,5 +1,5 @@
 .\" man 7 groff_mdoc  Best resource ever
-.Dd November 10, 2011
+.Dd November 15, 2011
 .Dt JSHON \&1 "Jshon Manual"
 .Os " "
 .Sh NAME
@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|A] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -128,6 +128,9 @@ running several times slower while using several times more memory.  However by-
 With
 .Nm \-V
 , changes must be manually inserted back through the stack instead of simply popping off the intermediate values.
+.Pp
+.It Cm -A
+(abort) on potentially recoverable errors.
 .
 .Pp
 .Sh OTHER TOOLS

@@ -20,6 +20,7 @@
     -S -> sort keys when writing objects
     -Q -> quiet, suppress stderr
     -V -> enable slower/safer pass-by-value
+    -A -> abort on any error
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -51,9 +52,6 @@
     Implementing this is going to be a pain.
     Maybe overwrite the original argv data?
     Maybe two nested parse loops?
-
-    Consider being more permissive on errors, PUSHing nulls
-    when asked to do nonsense.  (with -A to abort on these)
 */
 
 
@@ -76,6 +74,7 @@ int by_value = 0;
 
 // for error reporting
 int quiet = 0;
+int crash = 0;
 char** g_argv;
 
 // stack depth is limited by maxargs
@@ -90,6 +89,13 @@ void err(char* message)
 {
     if (!quiet)
         {fprintf(stderr, "%s\n", message);}
+    if (crash)
+        {exit(1);}
+}
+
+void hard_err(char* message)
+{
+    err(message);
     exit(1);
 }
 
@@ -99,23 +105,29 @@ void arg_err(char* message)
     int i;
     i = asprintf(&temp, message, optind-1, g_argv[optind-1]);
     if (i == -1)
-        {err("internal error: out of memory");}
+        {hard_err("internal error: out of memory");}
     err(temp);
 }
 
 void PUSH(json_t* json)
 {
     if (stackpointer >= &stack[STACKDEPTH])
-        {err("internal error: stack overflow");}
+        {hard_err("internal error: stack overflow");}
     if (json == NULL)
-        {arg_err("parse error: bad json on arg %i, \"%s\"");}
+    {
+        arg_err("parse error: bad json on arg %i, \"%s\"");
+        json = json_null();
+    }
     *stackpointer++ = json;
 }
 
 json_t** stack_safe_peek()
 {
     if (stackpointer < &stack[1])
-        {err("internal error: stack underflow");}
+    {
+        err("internal error: stack underflow");
+        PUSH(json_null());
+    }
     return stackpointer - 1;
 }
 
@@ -145,14 +157,14 @@ mapping* mapstackpointer = mapstack;
 mapping* map_safe_peek()
 {
     if (mapstackpointer < &mapstack[1])
-        {err("internal error: mapstack underflow");}
+        {hard_err("internal error: mapstack underflow");}
     return mapstackpointer - 1;
 }
 
 void MAPPUSH()
 {
     if (mapstackpointer >= &mapstack[STACKDEPTH])
-        {err("internal error: mapstack overflow");}
+        {hard_err("internal error: mapstack overflow");}
     mapstackpointer++;
     map_safe_peek()->stk = stack_safe_peek();
     map_safe_peek()->opt = optind;
@@ -191,6 +203,7 @@ void MAPNEXT()
             break;
         default:
             err("parse error: type not mappable");
+            map_safe_peek()->fin = 1;
     }
 }
 
@@ -337,17 +350,17 @@ char* smart_dumps(json_t* json)
             temp = json_dumps(j2, 0);
             i = asprintf(&temp2, "%.*s", (signed)strlen(temp)-2, &temp[1]);
             if (i == -1)
-                {err("internal error: out of memory");}
+                {hard_err("internal error: out of memory");}
             return temp2;
         case JSON_INTEGER:
             i = asprintf(&temp, "%ld", (long)json_integer_value(json));
             if (i == -1)
-                {err("internal error: out of memory");}
+                {hard_err("internal error: out of memory");}
             return temp;
         case JSON_REAL:
             i = asprintf(&temp, "%f", json_real_value(json));
             if (i == -1)
-                {err("internal error: out of memory");}
+                {hard_err("internal error: out of memory");}
             return temp;
         case JSON_TRUE:
             return "true";
@@ -357,7 +370,7 @@ char* smart_dumps(json_t* json)
             return "null";
         default:
             err("internal error: unknown type");
-            exit(1);
+            return "null";
     }
 }
 
@@ -370,7 +383,7 @@ json_t* smart_loads(char* j_string)
     int i;
     i = asprintf(&temp, "[%s]", j_string);
     if (i == -1)
-        {err("internal error: out of memory");}
+        {hard_err("internal error: out of memory");}
     json = compat_json_loads(temp, &error);
     if (!json)
         {return json_string(j_string);}
@@ -380,7 +393,7 @@ json_t* smart_loads(char* j_string)
 char* pretty_type(json_t* json)
 {
     if (json == NULL)
-        {return "NULL";}
+        {err("internal error: null pointer"); return "NULL";}
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
@@ -399,7 +412,7 @@ char* pretty_type(json_t* json)
             return "null";
         default:
             err("internal error: unknown type");
-            exit(1);
+            return "NULL";
     }
 }
 
@@ -409,7 +422,7 @@ void json_err(char* message, json_t* json)
     int i;
     i = asprintf(&temp, "parse error: type '%s' %s (arg %i)", pretty_type(json), message, optind-1);
     if (i == -1)
-        {err("internal error: out of memory");}
+        {hard_err("internal error: out of memory");}
     err(temp);
 }
 
@@ -430,7 +443,7 @@ int length(json_t* json)
         case JSON_NULL:
         default:
             json_err("has no length", json);
-            exit(1);
+            return 0;
     }
 }
 
@@ -449,9 +462,9 @@ void keys(json_t* json)
     size_t i, n;
 
     if (!json_is_object(json))
-        {json_err("has no keys", json);}
+        {json_err("has no keys", json); return;}
     if (!((keys = malloc(sizeof(char*) * json_object_size(json)))))
-        {err("internal error: out of memory");}
+        {hard_err("internal error: out of memory");}
 
     iter = json_object_iter(json);
     n = 0;
@@ -493,7 +506,7 @@ json_t* nonstring(char* arg)
     if (!errno && *endptr=='\0')
         {return temp;}
     arg_err("parse error: illegal nonstring on arg %i, \"%s\"");
-    exit(1);
+    return json_null();
 }
 
 const char* unstring(json_t* json)
@@ -512,7 +525,7 @@ const char* unstring(json_t* json)
         case JSON_ARRAY:
         default:
             json_err("is not simple/printable", json);
-            exit(1);
+            return "";
     }
 }
 
@@ -547,7 +560,7 @@ json_t* extract(json_t* json, char* key)
             break;
     }
     json_err("has no elements to extract", json);
-    exit(1);
+    return json_null();
 }
 
 json_t* delete(json_t* json, char* key)
@@ -578,7 +591,7 @@ json_t* delete(json_t* json, char* key)
         case JSON_NULL:
         default:
             json_err("cannot lose elements", json);
-            exit(1);
+            return json;
     }
 }
 
@@ -616,7 +629,7 @@ json_t* update_native(json_t* json, char* key, json_t* j_value)
         case JSON_NULL:
         default:
             json_err("cannot gain elements", json);
-            exit(1);
+            return json;
     }
 }
 
@@ -642,7 +655,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVtlkupae:s:n:d:i:"
+#define ALL_OPTIONS "PSQVAtlkupae:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -674,6 +687,9 @@ int main (int argc, char *argv[])
             case 'V':
                 by_value = 1;
                 break;
+            case 'A':
+                crash = 1;
+                break;
             case 't':
             case 'l':
             case 'k':
@@ -688,8 +704,9 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
-                exit(2);
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|A] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                if (crash)
+                    {exit(2);}
                 break;
         }
     }
@@ -809,9 +826,11 @@ int main (int argc, char *argv[])
                 case 'S': 
                 case 'Q':
                 case 'V':
+                case 'A':
                     break;
                 default:
-                    exit(2);
+                    if (crash)
+                        {exit(2);}
                     break;
             }
         }
