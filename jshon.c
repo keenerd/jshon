@@ -8,8 +8,6 @@
 #include <jansson.h>
 #include <errno.h>
 
-//kill atoi
-
 // MIT licensed, (c) 2011 Kyle Keen <keenerd@gmail.com>
 
 /*
@@ -531,6 +529,22 @@ const char* unstring(json_t* json)
     }
 }
 
+int estrtol(char* key)
+// strtol with more error handling
+{
+    int i;
+    char* endptr;
+    errno = 0;
+    i = strtol(key, &endptr, 10);
+    if (errno || *endptr!='\0')
+    {
+        arg_err("parse error: illegal index on arg %i, \"%s\"");
+        //return json_null();
+        i = 0;
+    }
+    return i;
+}
+
 json_t* extract(json_t* json, char* key)
 {
     int i, s;
@@ -546,12 +560,8 @@ json_t* extract(json_t* json, char* key)
             s = json_array_size(json);
             if (s == 0)
                 {break;}
-            i = atoi(key);
-            while (i < 0)
-                {i += s;}
-            while (i >= s)
-                {i -= s;}
-            return json_array_get(json, i);
+            i = estrtol(key);
+            return json_array_get(json, i % s);
         case JSON_STRING:
         case JSON_INTEGER:
         case JSON_REAL:
@@ -578,12 +588,8 @@ json_t* delete(json_t* json, char* key)
             s = json_array_size(json);
             if (s == 0)
                 {return json;}
-            i = atoi(key);
-            while (i < 0)
-                {i += s;}
-            while (i>=s && i>0)
-                {i -= s;}
-            json_array_remove(json, i);
+            i = estrtol(key);
+            json_array_remove(json, i % s);
             return json;
         case JSON_STRING:
         case JSON_INTEGER:
@@ -613,14 +619,12 @@ json_t* update_native(json_t* json, char* key, json_t* j_value)
                 return json;
             }
             // otherwise, insert
-            i = atoi(key);
+            i = estrtol(key);
             s = json_array_size(json);
             if (s == 0)
                 {i = 0;}
-            while (i < 0)
-                {i += s;}
-            while (i>=s && i>0)
-                {i -= s;}
+            else
+                {i = i % s;}
             json_array_insert(json, i, j_value);
             return json;
         case JSON_STRING:
