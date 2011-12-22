@@ -8,6 +8,8 @@
 #include <jansson.h>
 #include <errno.h>
 
+//kill atoi
+
 // MIT licensed, (c) 2011 Kyle Keen <keenerd@gmail.com>
 
 /*
@@ -20,7 +22,7 @@
     -S -> sort keys when writing objects
     -Q -> quiet, suppress stderr
     -V -> enable slower/safer pass-by-value
-    -A -> abort on any error
+    -C -> continue through errors
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -74,7 +76,7 @@ int by_value = 0;
 
 // for error reporting
 int quiet = 0;
-int crash = 0;
+int crash = 1;
 char** g_argv;
 
 // stack depth is limited by maxargs
@@ -655,7 +657,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVAtlkupae:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCtlkupae:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -687,8 +689,8 @@ int main (int argc, char *argv[])
             case 'V':
                 by_value = 1;
                 break;
-            case 'A':
-                crash = 1;
+            case 'C':
+                crash = 0;
                 break;
             case 't':
             case 'l':
@@ -704,7 +706,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|A] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -826,7 +828,7 @@ int main (int argc, char *argv[])
                 case 'S': 
                 case 'Q':
                 case 'V':
-                case 'A':
+                case 'C':
                     break;
                 default:
                     if (crash)
