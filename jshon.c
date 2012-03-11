@@ -69,6 +69,42 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 }
 #endif
 
+#if (defined (__SVR4) && defined (__sun))
+#include <stdarg.h>
+
+int asprintf(char **ret, const char *format, ...)
+{
+    va_list ap;
+    fprintf(stderr, "%s\n", "in the asprintf");
+
+    *ret = NULL;  /* Ensure value can be passed to free() */
+
+    va_start(ap, format);
+    int count = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+
+    if (count >= 0)
+    {
+        char* buffer = malloc(count + 1);
+        if (buffer == NULL)
+            {return -1;}
+
+        va_start(ap, format);
+        count = vsnprintf(buffer, count + 1, format, ap);
+        va_end(ap);
+
+        if (count < 0)
+        {
+            free(buffer);
+            return count;
+        }
+        *ret = buffer;
+    }
+
+    return count;
+}
+#endif
+
 int dumps_flags = JSON_INDENT(1);
 int by_value = 0;
 
