@@ -22,6 +22,7 @@
     -V -> enable slower/safer pass-by-value
     -C -> continue through errors
     -F path -> read from file instead of stdin
+    -I -> change file in place, requires -F
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -56,12 +57,6 @@
 
     -L(abel)
     add jsonpipe/style/prefix/labels\t to pretty-printed json
-
-    -I(n place)
-    write changes back to the source file
-    does not produce stdout
-    automatically unwinds stack?
-    needs filename arg...
 */
 
 
@@ -728,6 +723,7 @@ int main (int argc, char *argv[])
 {
     char* content = "";
     char* arg1 = "";
+    FILE* fp;
     json_t* json = NULL;
     json_t* jval = NULL;
     json_error_t error;
@@ -789,6 +785,9 @@ int main (int argc, char *argv[])
 #ifdef BSD
     optreset = 1;
 #endif
+
+    if (in_place && strlen(file_path)==0)
+        {err("warning: in-place editing (-I) requires -F");}
 
     if (!strcmp(file_path, "-"))
         {content = read_stdin();}
@@ -915,11 +914,16 @@ int main (int argc, char *argv[])
                     break;
             }
         }
-        if (in_place)
-            {printf("%s\n", smart_dumps(stack[0]));}
-        else if (output && stackpointer != stack)
+        if (!in_place && output && stackpointer != stack)
             {printf("%s\n", smart_dumps(PEEK));}
     } while (! MAPEMPTY);
+
+    if (in_place && strlen(file_path) > 0)
+    {
+        fp = fopen(file_path, "w");
+        fprintf(fp, "%s\n", smart_dumps(stack[0]));
+        fclose(fp);
+    }
 }
 
 

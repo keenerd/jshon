@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -106,7 +106,7 @@ There are several meta-options that do not directly edit json.  Call these at mo
 .Pp
 .Bl -tag -width ".." -compact
 .It Cm -F <path>
-(file) reads from a file instead of stdin.  The only non-manipulation option that takes an argument.
+(file) reads from a file instead of stdin.  The only non-manipulation option to take an argument.
 .Pp
 .It Cm -P
 (jsonp) strips a jsonp callback before continuing normally.
@@ -134,6 +134,9 @@ With
 .Pp
 .It Cm -C
 (continue) on potentially recoverable errors.  For example, extracting values that don't exist will add 'null' to the edit stack instead of aborting.  Behavior may change in the future.
+.Pp
+.It Cm -I
+(in-place) file editing.  Requires a file to modify and so only works with -F.  This is meant for making slight changes to a json file.  When used, normal output is suppressed and the bottom of the edit stack is written out.
 .
 .Pp
 .Sh OTHER TOOLS
