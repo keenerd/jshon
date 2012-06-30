@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|C] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -105,6 +105,9 @@ the new value, and then insert at the index.
 There are several meta-options that do not directly edit json.  Call these at most once per invocation.
 .Pp
 .Bl -tag -width ".." -compact
+.It Cm -F <path>
+(file) reads from a file instead of stdin.  The only non-manipulation option that takes an argument.
+.Pp
 .It Cm -P
 (jsonp) strips a jsonp callback before continuing normally.
 .Pp

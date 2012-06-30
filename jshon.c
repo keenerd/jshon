@@ -21,6 +21,7 @@
     -Q -> quiet, suppress stderr
     -V -> enable slower/safer pass-by-value
     -C -> continue through errors
+    -F path -> read from file instead of stdin
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -52,6 +53,15 @@
     Implementing this is going to be a pain.
     Maybe overwrite the original argv data?
     Maybe two nested parse loops?
+
+    -L(abel)
+    add jsonpipe/style/prefix/labels\t to pretty-printed json
+
+    -I(n place)
+    write changes back to the source file
+    does not produce stdout
+    automatically unwinds stack?
+    needs filename arg...
 */
 
 
@@ -107,6 +117,8 @@ int asprintf(char **ret, const char *format, ...)
 
 int dumps_flags = JSON_INDENT(1);
 int by_value = 0;
+int in_place = 0;
+char* file_path = "";
 
 // for error reporting
 int quiet = 0;
@@ -254,18 +266,16 @@ void MAPPOP()
 #define MAPPEEK       *(map_safe_peek())
 #define MAPEMPTY      (mapstackpointer == mapstack)
 
-char* read_stdin(void)
+char* read_stream(FILE* fp)
 // http://stackoverflow.com/questions/2496668/
 {
     char buffer[BUFSIZ];
     size_t contentSize = 1; // includes NULL
     char* content = malloc(sizeof(char) * BUFSIZ);
-    if (isatty(fileno(stdin)))
-        {return "";}
     if(content == NULL)
         {return "";}
     content[0] = '\0';
-    while(fgets(buffer, BUFSIZ, stdin))
+    while(fgets(buffer, BUFSIZ, fp))
     {
         char* old = content;
         contentSize += strlen(buffer);
@@ -278,11 +288,28 @@ char* read_stdin(void)
         strcat(content, buffer);
     }
 
-    if(ferror(stdin))
+    if(ferror(fp))
     {
         free(content);
         return "";
     }
+    return content;
+}
+
+char* read_stdin(void)
+{
+    if (isatty(fileno(stdin)))
+        {return "";}
+    return read_stream(stdin);
+}
+
+char* read_file(char* path)
+{
+    FILE* fp;
+    char* content;
+    fp = fopen(path, "r");
+    content = read_stream(fp);
+    fclose(fp);
     return content;
 }
 
@@ -697,7 +724,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCtlkupae:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCItlkupaF:e:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -732,6 +759,12 @@ int main (int argc, char *argv[])
             case 'C':
                 crash = 0;
                 break;
+            case 'I':
+                in_place = 1;
+                break;
+            case 'F':
+                file_path = (char*) strdup(optarg);
+                break;
             case 't':
             case 'l':
             case 'k':
@@ -746,7 +779,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -757,10 +790,14 @@ int main (int argc, char *argv[])
     optreset = 1;
 #endif
 
-
-    content = read_stdin();
+    if (!strcmp(file_path, "-"))
+        {content = read_stdin();}
+    else if (strlen(file_path) > 0)
+        {content = read_file(file_path);}
+    else
+        {content = read_stdin();}
     if (!content[0] && !quiet)
-        {fprintf(stderr, "warning: nothing to read on stdin\n");}
+        {fprintf(stderr, "warning: nothing to read\n");}
 
     if (jsonp)
         {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
@@ -869,6 +906,8 @@ int main (int argc, char *argv[])
                 case 'Q':
                 case 'V':
                 case 'C':
+                case 'I':
+                case 'F':
                     break;
                 default:
                     if (crash)
@@ -876,7 +915,9 @@ int main (int argc, char *argv[])
                     break;
             }
         }
-        if (output && stackpointer != stack)
+        if (in_place)
+            {printf("%s\n", smart_dumps(stack[0]));}
+        else if (output && stackpointer != stack)
             {printf("%s\n", smart_dumps(PEEK));}
     } while (! MAPEMPTY);
 }
