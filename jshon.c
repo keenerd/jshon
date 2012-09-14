@@ -38,6 +38,8 @@
                        arrays can take negative numbers or 'append'
     -a(cross) -> iterate across the current dict or list
 
+    --version -> returns an arbitrary number, exits
+
     Multiple commands can be chained.
     Entire json is loaded into memory.
     -e/-a copies and stores on a stack with -V.
@@ -57,8 +59,12 @@
 
     -L(abel)
     add jsonpipe/style/prefix/labels\t to pretty-printed json
+
+    color?
+    loadf for stdin?
 */
 
+#define JSHONVER 20120914
 
 // deal with API incompatibility between jansson 1.x and 2.x
 #ifndef JANSSON_MAJOR_VERSION
@@ -432,6 +438,19 @@ char* smart_dumps(json_t* json)
     }
 }
 
+/*char* pretty_dumps(json_t* json)
+// underscore-style colorizing
+// needs a more or less rewrite of dumps()
+{
+    int depth = 0;
+    // loop over everything
+    // needs a stack
+    // number, orange
+    // string, green
+    // null, bold white
+    // string, purple?
+}*/
+
 json_t* smart_loads(char* j_string)
 // json_loads is broken on simple types
 {
@@ -734,6 +753,10 @@ int main (int argc, char *argv[])
     g_argv = argv;
 
     // todo: get more jsonp stuff out of main
+
+    // avoiding getopt_long for now because the BSD version is a pain
+    if (argc == 2 && strncmp(argv[1], "--version", 9) == 0)
+        {printf("%i\n", JSHONVER); exit(0);}
 
     // non-manipulation options
     while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
