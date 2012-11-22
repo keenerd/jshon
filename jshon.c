@@ -636,8 +636,13 @@ json_t* extract(json_t* json, char* key)
         case JSON_ARRAY:
             s = json_array_size(json);
             if (s == 0)
-                {break;}
+                {json_err("index out of bounds", json); break;}
             i = estrtol(key);
+            if ((i < -s) || (i >= s))
+                {json_err("index out of bounds", json);}
+            // stupid fix for a stupid modulus operation
+            while (i<0)
+                {i+=s;}
             return json_array_get(json, i % s);
         case JSON_STRING:
         case JSON_INTEGER:
