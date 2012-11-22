@@ -116,7 +116,7 @@ int asprintf(char **ret, const char *format, ...)
 }
 #endif
 
-int dumps_flags = JSON_INDENT(1);
+int dumps_flags = JSON_INDENT(1) | JSON_PRESERVE_ORDER;
 int by_value = 0;
 int in_place = 0;
 char* file_path = "";
@@ -767,6 +767,7 @@ int main (int argc, char *argv[])
                 jsonp = 1;
                 break;
             case 'S':
+                dumps_flags &= ~JSON_PRESERVE_ORDER;
                 dumps_flags |= JSON_SORT_KEYS;
                 break;
             case 'Q':
