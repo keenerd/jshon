@@ -64,7 +64,7 @@
     loadf for stdin?
 */
 
-#define JSHONVER 20120914
+#define JSHONVER 20121122
 
 // deal with API incompatibility between jansson 1.x and 2.x
 #ifndef JANSSON_MAJOR_VERSION
