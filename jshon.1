@@ -149,6 +149,15 @@ always outputs one field per line.  Many unix tools expect multiple tab separate
 \&  jshon ... | sed 's/^$/-/' | paste -s -d '\\t\\t\\n'
 .Pp
 This replaces blanks with '-' and merges every three lines into one.
+.Pp
+There are more and more tools that produce json output.  Often these use a line-oriented json/plaintext hybrid where each line is an independent json structure.  Sadly this means the output as a whole is not legitimate json.  Either loop though the data line by line (calling
+.Nm
+once for each line) or convert it to a legitimate json array.  For example:
+.Pp
+\&  while read line; do jshon <<< "$line"; done < <(journalctl -o json)
+.Pp
+\&  journalctl -o json | sed -e '1i[' -e '$!s/$/,/' -e '$a]' | jshon
+.Pp
 .
 .Pp
 .Sh GOLF
