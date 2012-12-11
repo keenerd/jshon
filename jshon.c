@@ -953,6 +953,7 @@ int main (int argc, char *argv[])
         fprintf(fp, "%s\n", smart_dumps(stack[0]));
         fclose(fp);
     }
+    return 0;
 }
 
 
