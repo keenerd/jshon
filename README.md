@@ -6,7 +6,7 @@ Your system need to provide the [`jansson` library](http://www.digip.org/jansson
 
 ### Install / Building 
 
-#### Gentoo
+#### Arch/Chakra Linux
 
     pacman -S jshon
 
