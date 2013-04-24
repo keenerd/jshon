@@ -424,7 +424,7 @@ char* smart_dumps(json_t* json)
                 {hard_err("internal error: out of memory");}
             return temp;
         case JSON_REAL:
-            i = asprintf(&temp, "%f", json_real_value(json));
+            i = asprintf(&temp, "%.14g", json_real_value(json));
             if (i == -1)
                 {hard_err("internal error: out of memory");}
             return temp;
