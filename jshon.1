@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|C|I|X|A] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -138,6 +138,12 @@ With
 .It Cm -I
 (in-place) file editing.  Requires a file to modify and so only works with -F.  This is meant for making slight changes to a json file.  When used, normal output is suppressed and the bottom of the edit stack is written out.
 .Pp
+.It Cm -X
+(compact) representation.  Outputs JSON on a single line, with separators not followed by spaces.
+.Pp
+.It Cm -A
+(ascii) only.  Ensures ASCII output by escaping Unicode characters.
+.Pp
 .It Cm --version
 Returns a YYYYMMDD timestamp and exits.
 .
@@ -180,9 +186,10 @@ with patches from
 .An Dave Reisner Aq d@falconindy.com ,
 .An AndrewF 
 (BSD, OSX, jsonp, sorting),
-and 
 .An Jean-Marc A
-(solaris).
+(solaris),
+and
+.An Pierre Chapuis.
 .
 .Pp
 .Sh BUGS

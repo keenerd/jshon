@@ -23,6 +23,8 @@
     -C -> continue through errors
     -F path -> read from file instead of stdin
     -I -> change file in place, requires -F
+    -X -> compact representation for JSON output
+    -A -> ensure ASCII output by escaping Unicode characters
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -422,7 +424,7 @@ char* smart_dumps(json_t* json)
                 {hard_err("internal error: out of memory");}
             return temp;
         case JSON_REAL:
-            i = asprintf(&temp, "%f", json_real_value(json));
+            i = asprintf(&temp, "%.14g", json_real_value(json));
             if (i == -1)
                 {hard_err("internal error: out of memory");}
             return temp;
@@ -743,7 +745,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCItlkupaF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCIXAtlkupaF:e:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -753,6 +755,9 @@ int main (int argc, char *argv[])
     json_error_t error;
     int output = 1;  // flag if json should be printed
     int optchar;
+    int compact = 0;
+    int sort_by_key = 0;
+    int ascii = 0;
     int jsonp = 0;   // flag if we should tolerate JSONP wrapping
     int jsonp_rows = 0, jsonp_cols = 0;   // rows+cols skipped over by JSONP prologue
     g_argv = argv;
@@ -772,8 +777,7 @@ int main (int argc, char *argv[])
                 jsonp = 1;
                 break;
             case 'S':
-                dumps_flags &= ~JSON_PRESERVE_ORDER;
-                dumps_flags |= JSON_SORT_KEYS;
+                sort_by_key = 1;
                 break;
             case 'Q':
                 quiet = 1;
@@ -790,6 +794,12 @@ int main (int argc, char *argv[])
             case 'F':
                 file_path = (char*) strdup(optarg);
                 break;
+            case 'X':
+                compact = 1;
+                break;
+            case 'A':
+                ascii = 1;
+                break;
             case 't':
             case 'l':
             case 'k':
@@ -804,7 +814,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|X|A] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -815,6 +825,15 @@ int main (int argc, char *argv[])
     optreset = 1;
 #endif
 
+    if (compact)
+        {dumps_flags = JSON_INDENT(0) | JSON_COMPACT | JSON_PRESERVE_ORDER;}
+    if (ascii)
+        {dumps_flags |= JSON_ENSURE_ASCII;}
+    if (sort_by_key)
+    {
+        dumps_flags &= ~JSON_PRESERVE_ORDER;
+        dumps_flags |= JSON_SORT_KEYS;
+    }
     if (in_place && strlen(file_path)==0)
         {err("warning: in-place editing (-I) requires -F");}
 
@@ -936,6 +955,8 @@ int main (int argc, char *argv[])
                 case 'C':
                 case 'I':
                 case 'F':
+                case 'X':
+                case 'A':
                     break;
                 default:
                     if (crash)
