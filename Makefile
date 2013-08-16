@@ -20,7 +20,7 @@ clean:
 dist: clean
 	sed -i "s/#define JSHONVER .*/#define JSHONVER ${VERSION}/" jshon.c
 	mkdir jshon-${VERSION}
-	cp jshon.c jshon.1 Makefile jshon-${VERSION}
+	cp jshon.c jshon.1 Makefile LICENSE jshon-${VERSION}
 	tar czf jshon-${VERSION}.tar.gz jshon-${VERSION}
 	${RM} -r jshon-${VERSION}
 
