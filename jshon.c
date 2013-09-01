@@ -223,14 +223,15 @@ void MAPPUSH()
     mapstackpointer++;
     map_safe_peek()->stk = stack_safe_peek();
     map_safe_peek()->opt = optind;
-    map_safe_peek()->fin = 0;
     switch (json_typeof(PEEK))
     {
         case JSON_OBJECT:
             map_safe_peek()->itr = json_object_iter(PEEK);
+            map_safe_peek()->fin = !map_safe_peek()->itr;
             break;
         case JSON_ARRAY:
             map_safe_peek()->lin = 0;
+            map_safe_peek()->fin = json_array_size(*(map_safe_peek()->stk)) == 0;
             break;
         default:
             err("parse error: type not mappable");
@@ -787,6 +788,7 @@ int main (int argc, char *argv[])
     int optchar;
     int jsonp = 0;   // flag if we should tolerate JSONP wrapping
     int jsonp_rows = 0, jsonp_cols = 0;   // rows+cols skipped over by JSONP prologue
+    int empty;
     g_argv = argv;
 
     // todo: get more jsonp stuff out of main
@@ -898,13 +900,12 @@ int main (int argc, char *argv[])
                 MAPPOP();
                 if (MAPEMPTY)
                     {exit(0);}
-                if (map_safe_peek()->fin)
-                    {MAPNEXT();}
             }
             MAPNEXT();
         }
         while ((optchar = getopt(argc, argv, ALL_OPTIONS)) != -1)
         {
+            empty = 0;
             switch (optchar)
             {
                 case 't':  // id type
@@ -961,7 +962,9 @@ int main (int argc, char *argv[])
                 case 'a':  // across
                     // something about -a is not mappable?
                     MAPPUSH();
-                    MAPNEXT();
+                    empty = map_safe_peek()->fin;
+                    if (!empty)
+                        {MAPNEXT();}
                     output = 0;
                     break;
                 case 'P':  // not manipulations
@@ -978,6 +981,8 @@ int main (int argc, char *argv[])
                         {exit(2);}
                     break;
             }
+            if (empty)
+                {break;}
         }
         if (!in_place && output && stackpointer != stack)
             {printf("%s\n", smart_dumps(PEEK));}
