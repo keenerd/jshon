@@ -64,7 +64,7 @@
     loadf for stdin?
 */
 
-#define JSHONVER 20130815
+#define JSHONVER 20130901
 
 // deal with API incompatibility between jansson 1.x and 2.x
 #ifndef JANSSON_MAJOR_VERSION
@@ -72,12 +72,16 @@
 #endif
 
 #if JANSSON_MAJOR_VERSION < 2
-#    define compat_json_loads json_loads
+#  define compat_json_loads json_loads
 #else
 static json_t *compat_json_loads(const char *input, json_error_t *error)
 {
     return json_loads(input, 0, error);
 }
+#endif
+
+#if JANSSON_VERSION_HEX < 0x020400
+#  define JSON_ESCAPE_SLASH 0
 #endif
 
 #if (defined (__SVR4) && defined (__sun))
@@ -116,7 +120,7 @@ int asprintf(char **ret, const char *format, ...)
 }
 #endif
 
-int dumps_flags = JSON_INDENT(1) | JSON_PRESERVE_ORDER;
+int dumps_flags = JSON_INDENT(1) | JSON_PRESERVE_ORDER | JSON_ESCAPE_SLASH;
 int by_value = 0;
 int in_place = 0;
 char* file_path = "";
@@ -391,8 +395,7 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
     return first;
 }
 
-
-
+#if JANSSON_VERSION_HEX < 0x020100
 char* smart_dumps(json_t* json)
 // json_dumps is broken on simple types
 {
@@ -408,16 +411,15 @@ char* smart_dumps(json_t* json)
             return json_dumps(json, dumps_flags);
         case JSON_STRING:
             // hack to print escaped string
-            // but / is still not escaped
             j2 = json_array();
             json_array_append(j2, json);
-            temp = json_dumps(j2, 0);
+            temp = json_dumps(j2, JSON_ESCAPE_SLASH);
             i = asprintf(&temp2, "%.*s", (signed)strlen(temp)-2, &temp[1]);
             if (i == -1)
                 {hard_err("internal error: out of memory");}
             return temp2;
         case JSON_INTEGER:
-            i = asprintf(&temp, "%ld", (long)json_integer_value(json));
+            i = asprintf(&temp, "%" JSON_INTEGER_FORMAT, json_integer_value(json));
             if (i == -1)
                 {hard_err("internal error: out of memory");}
             return temp;
@@ -437,6 +439,26 @@ char* smart_dumps(json_t* json)
             return "null";
     }
 }
+#else
+char* smart_dumps(json_t* json)
+{
+    switch (json_typeof(json))
+    {
+        case JSON_OBJECT:
+        case JSON_ARRAY:
+        case JSON_STRING:
+        case JSON_INTEGER:
+        case JSON_REAL:
+        case JSON_TRUE:
+        case JSON_FALSE:
+        case JSON_NULL:
+            return json_dumps(json, dumps_flags | JSON_ENCODE_ANY);
+        default:
+            err("internal error: unknown type");
+            return "null";
+    }
+}
+#endif
 
 /*char* pretty_dumps(json_t* json)
 // underscore-style colorizing
@@ -451,6 +473,7 @@ char* smart_dumps(json_t* json)
     // string, purple?
 }*/
 
+#if JANSSON_VERSION_HEX < 0x020300
 json_t* smart_loads(char* j_string)
 // json_loads is broken on simple types
 {
@@ -466,6 +489,13 @@ json_t* smart_loads(char* j_string)
         {return json_string(j_string);}
     return json_array_get(json, 0);
 }
+#else
+json_t* smart_loads(char* j_string)
+{
+    json_error_t error;
+    return json_loads(j_string, JSON_DECODE_ANY, &error);
+}
+#endif
 
 char* pretty_type(json_t* json)
 {

@@ -1,5 +1,5 @@
 .\" man 7 groff_mdoc  Best resource ever
-.Dd March 11, 2012
+.Dd September 1, 2013
 .Dt JSHON \&1 "Jshon Manual"
 .Os " "
 .Sh NAME
@@ -51,7 +51,7 @@ in the middle of them.
 \&  jshon -k -> a b c
 .Pp
 .It Cm -e index
-(extract) returns json value at "index".  Only works on object, array.
+(extract) returns json value at "index".  Only works on object, array.  The index of an array is an integer.
 .Pp
 \&  jshon -e c -> {"d":4,"e":5}
 .Pp
@@ -186,5 +186,5 @@ and
 .
 .Pp
 .Sh BUGS
-Numerous!  Forward slashes are never escaped.  Could be more convenient to use.  Documentation is brief.
+Numerous!  Floats may lose precision.  Could be more convenient to use.  Documentation is brief.
 
