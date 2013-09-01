@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -137,6 +137,9 @@ With
 .Pp
 .It Cm -I
 (in-place) file editing.  Requires a file to modify and so only works with -F.  This is meant for making slight changes to a json file.  When used, normal output is suppressed and the bottom of the edit stack is written out.
+.Pp
+.It Cm -0
+(null delimiters)  Changes the delimiter of -u from a newline to a null.  This option only affects -u because that is the only time a newline may legitimately appear in the output.
 .Pp
 .It Cm --version
 Returns a YYYYMMDD timestamp and exits.

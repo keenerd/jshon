@@ -23,6 +23,7 @@
     -C -> continue through errors
     -F path -> read from file instead of stdin
     -I -> change file in place, requires -F
+    -0 -> null delimiters
 
     -t(ype) -> str, object, list, number, bool, null
     -l(ength) -> only works on str, dict, list
@@ -123,6 +124,7 @@ int asprintf(char **ret, const char *format, ...)
 int dumps_flags = JSON_INDENT(1) | JSON_PRESERVE_ORDER | JSON_ESCAPE_SLASH;
 int by_value = 0;
 int in_place = 0;
+char delim = '\n';
 char* file_path = "";
 
 // for error reporting
@@ -773,7 +775,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCItlkupaF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCI0tlkupaF:e:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -820,6 +822,9 @@ int main (int argc, char *argv[])
             case 'F':
                 file_path = (char*) strdup(optarg);
                 break;
+            case '0':
+                delim = '\0';
+                break;
             case 't':
             case 'l':
             case 'k':
@@ -834,7 +839,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -915,7 +920,7 @@ int main (int argc, char *argv[])
                     output = 0;
                     break;
                 case 'u':  // unescape string
-                    printf("%s\n", unstring(PEEK));
+                    printf("%s%c", unstring(PEEK), delim);
                     output = 0;
                     break;
                 case 'p':  // pop stack
@@ -966,6 +971,7 @@ int main (int argc, char *argv[])
                 case 'C':
                 case 'I':
                 case 'F':
+                case '0':
                     break;
                 default:
                     if (crash)
