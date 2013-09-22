@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/param.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <jansson.h>
 #include <errno.h>
@@ -274,34 +275,90 @@ void MAPPOP()
 #define MAPPEEK       *(map_safe_peek())
 #define MAPEMPTY      (mapstackpointer == mapstack)
 
-char* read_stream(FILE* fp)
-// http://stackoverflow.com/questions/2496668/
+char* loop_read_fd(int fd)
 {
     char buffer[BUFSIZ];
-    size_t contentSize = 1; // includes NULL
-    char* content = malloc(sizeof(char) * BUFSIZ);
-    if(content == NULL)
-        {return "";}
-    content[0] = '\0';
-    while(fgets(buffer, BUFSIZ, fp))
+    char *content = NULL;
+    size_t content_size = 0;
+    size_t content_capacity = BUFSIZ * 2.5;
+
+    content = malloc(content_capacity);
+    if (content == NULL)
     {
-        char* old = content;
-        contentSize += strlen(buffer);
-        content = realloc(content, contentSize);
-        if(content == NULL)
-        {
-            free(old);
-            return "";
-        }
-        strcat(content, buffer);
+        fprintf(stderr, "error: failed to allocate %zd bytes\n", content_capacity);
+        return NULL;
     }
 
-    if(ferror(fp))
+    for (;;)
     {
-        free(content);
-        return "";
+        ssize_t bytes_r = read(fd, buffer, sizeof(buffer));
+        if (bytes_r < 0)
+        {
+            fprintf(stderr, "error: failed to read from fd: %s\n", strerror(errno));
+            goto fail;
+        }
+
+        if (bytes_r == 0)
+        {
+            return content;
+        }
+
+        if (content_size + bytes_r >= content_capacity)
+        {
+            content_capacity *= 2.5;
+            void *newalloc = realloc(content, content_capacity);
+            if (newalloc == NULL)
+            {
+                fprintf(stderr, "error: failed to reallocate buffer to %zd bytes\n",
+                        content_capacity);
+                goto fail;
+            }
+            content = newalloc;
+        }
+
+        memcpy(&content[content_size], buffer, bytes_r);
+        content_size += bytes_r;
+        content[content_size] = '\0';
     }
+
     return content;
+
+fail:
+    free(content);
+    return NULL;
+}
+
+char* read_stream(FILE* fp)
+{
+    struct stat st;
+    char *buffer;
+
+    if (fstat(fileno(fp), &st) < 0)
+    {
+        fprintf(stderr, "failed to stat file: %s\n", strerror(errno));
+        return NULL;
+    }
+
+    if (st.st_size == 0 && lseek(fileno(fp), 0, SEEK_CUR) < 0)
+    {
+        return loop_read_fd(fileno(fp));
+    }
+
+    buffer = malloc(st.st_size + 1);
+    if (buffer == NULL)
+    {
+        fprintf(stderr, "error: failed to allocate %zd bytes\n", st.st_size + 1);
+        return NULL;
+    }
+
+    size_t bytes_r = fread(buffer, 1, st.st_size, fp);
+    if ((ssize_t)bytes_r != st.st_size)
+    {
+        fprintf(stderr, "short read: expected to read %zd bytes, only got %zd\n",
+                st.st_size, bytes_r);
+    }
+
+    return buffer;
 }
 
 char* read_stdin(void)
