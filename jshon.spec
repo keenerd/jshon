@@ -5,7 +5,7 @@ Summary:	Jshon is a JSON parser designed for maximum convenience within the shel
 
 Group:		Applications/System
 License:	MIT
-URL:		http://www.digip.org/jansson/
+URL:		http://kmkeen.com/jshon
 Source0:	jshon-%{version}.tar.gz
 Patch0:		jshon-makefile-enable-install.patch
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
