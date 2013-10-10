@@ -2,20 +2,30 @@
 
 CFLAGS := -std=c99 -Wall -pedantic -Wextra -Werror ${CFLAGS}
 LDLIBS  = -ljansson
+INSTALL=install
+DESTDIR?=/
+MANDIR=$(DESTDIR)/usr/share/man/man1/
+TARGET_PATH=$(DESTDIR)/usr/bin
+DISTFILES=jshon
+MANFILE=jshon.1
 
 #VERSION=$(shell date +%Y%m%d)
 VERSION=$(shell git show -s --format="%ci" HEAD | cut -d ' ' -f 1 | tr -d '-')
 #VERSION=$(grep "^#define JSHONVER" | cut -d ' ' -f 3)
 
-all: jshon
+all: $(DISTFILES)
 
-jshon: jshon.o
+$(DISTFILES): jshon.o
 
-strip: jshon
-	strip --strip-all jshon
+strip: $(DISFILES)
+	strip --strip-all $(DISTFILES)
 
 clean:
-	rm -f *.o jshon
+	rm -f *.o $(DISTFILES)
+
+install:
+	$(INSTALL) -D $(DISTFILES) $(TARGET_PATH)/$(DISTFILES)
+	$(INSTALL) -D $(MANFILE) $(MANDIR)/$(MANFILE)
 
 dist: clean
 	sed -i "s/#define JSHONVER .*/#define JSHONVER ${VERSION}/" jshon.c
