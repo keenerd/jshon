@@ -1,5 +1,5 @@
 Name:		jshon
-Version:	20130922
+Version:	20131105
 Release:	0%{?dist}
 Summary:	Jshon is a JSON parser designed for maximum convenience within the shell
 

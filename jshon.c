@@ -33,6 +33,7 @@
     -s(tring) value -> adds json escapes
     -n(onstring) value -> creates true/false/null/array/object/int/float
     -u(nstring) -> removes json escapes, display value
+    -j(son lieral) -> preserves json escapes, display value
     -p(op) -> pop/undo the last manipulation
     -d(elete) index -> remove an element from an object or array
     -i(nsert) index -> opposite of extract, merges json up the stack
@@ -66,7 +67,7 @@
     loadf for stdin?
 */
 
-#define JSHONVER 20130901
+#define JSHONVER 20131105
 
 // deal with API incompatibility between jansson 1.x and 2.x
 #ifndef JANSSON_MAJOR_VERSION
@@ -123,6 +124,7 @@ int asprintf(char **ret, const char *format, ...)
 #endif
 
 int dumps_flags = JSON_INDENT(1) | JSON_PRESERVE_ORDER | JSON_ESCAPE_SLASH;
+int dumps_compact = JSON_INDENT(0) | JSON_COMPACT | JSON_PRESERVE_ORDER | JSON_ESCAPE_SLASH;
 int by_value = 0;
 int in_place = 0;
 char delim = '\n';
@@ -347,7 +349,7 @@ char* read_stream(FILE* fp)
     buffer = malloc(st.st_size + 1);
     if (buffer == NULL)
     {
-        fprintf(stderr, "error: failed to allocate %zd bytes\n", st.st_size + 1);
+        fprintf(stderr, "error: failed to allocate %zd bytes\n", (ssize_t)(st.st_size + 1));
         return NULL;
     }
 
@@ -355,7 +357,7 @@ char* read_stream(FILE* fp)
     if ((ssize_t)bytes_r != st.st_size)
     {
         fprintf(stderr, "short read: expected to read %zd bytes, only got %zd\n",
-                st.st_size, bytes_r);
+                (ssize_t)st.st_size, (ssize_t)bytes_r);
     }
 
     return buffer;
@@ -456,19 +458,21 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
 }
 
 #if JANSSON_VERSION_HEX < 0x020100
-char* smart_dumps(json_t* json)
+char* smart_dumps(json_t* json, int flags)
 // json_dumps is broken on simple types
 {
     char* temp;
     char* temp2;
     json_t* j2;
     int i;
+    if (!flags)
+	{flags = dumps_flags;}
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
-            return json_dumps(json, dumps_flags);
+            return json_dumps(json, flags);
         case JSON_ARRAY:
-            return json_dumps(json, dumps_flags);
+            return json_dumps(json, flags);
         case JSON_STRING:
             // hack to print escaped string
             j2 = json_array();
@@ -500,8 +504,10 @@ char* smart_dumps(json_t* json)
     }
 }
 #else
-char* smart_dumps(json_t* json)
+char* smart_dumps(json_t* json, int flags)
 {
+    if (!flags)
+	{flags = dumps_flags;}
     switch (json_typeof(json))
     {
         case JSON_OBJECT:
@@ -512,7 +518,7 @@ char* smart_dumps(json_t* json)
         case JSON_TRUE:
         case JSON_FALSE:
         case JSON_NULL:
-            return json_dumps(json, dumps_flags | JSON_ENCODE_ANY);
+            return json_dumps(json, flags | JSON_ENCODE_ANY);
         default:
             err("internal error: unknown type");
             return "null";
@@ -687,7 +693,7 @@ const char* unstring(json_t* json)
         case JSON_TRUE:
         case JSON_FALSE:
         case JSON_NULL:
-            return smart_dumps(json);
+            return smart_dumps(json, 0);
         case JSON_OBJECT:
         case JSON_ARRAY:
         default:
@@ -821,7 +827,7 @@ void debug_stack(int optchar)
     json_t** j;
     printf("BEGIN STACK DUMP %c\n", optchar);
     for (j=stack; j<stackpointer; j++)
-        {printf("%s\n", smart_dumps(*j));}
+        {printf("%s\n", smart_dumps(*j, 0));}
 }
 
 void debug_map()
@@ -829,11 +835,11 @@ void debug_map()
     mapping* m;
     printf("BEGIN MAP DUMP\n");
     for (m=mapstack; m<mapstackpointer; m++)
-        {printf("%s\n", smart_dumps(*(m->stk)));}
+        {printf("%s\n", smart_dumps(*(m->stk), 0));}
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCI0tlkupaF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCI0tlkupajF:e:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -865,6 +871,8 @@ int main (int argc, char *argv[])
             case 'S':
                 dumps_flags &= ~JSON_PRESERVE_ORDER;
                 dumps_flags |= JSON_SORT_KEYS;
+                dumps_compact &= ~JSON_PRESERVE_ORDER;
+                dumps_compact |= JSON_SORT_KEYS;
                 break;
             case 'Q':
                 quiet = 1;
@@ -890,6 +898,7 @@ int main (int argc, char *argv[])
             case 'u':
             case 'p':
             case 'e':
+            case 'j':
             case 's':
             case 'n':
             case 'd':
@@ -898,7 +907,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -1003,6 +1012,10 @@ int main (int argc, char *argv[])
                     PUSH(extract(maybe_deep(json), arg1));
                     output = 1;
                     break;
+                case 'j':  // json literal
+                    printf("%s%c", smart_dumps(PEEK, dumps_compact), delim);
+                    output = 0;
+                    break;
                 case 'd':  // delete
                     arg1 = (char*) strdup(optarg);
                     json = POP;
@@ -1042,13 +1055,13 @@ int main (int argc, char *argv[])
                 {break;}
         }
         if (!in_place && output && stackpointer != stack)
-            {printf("%s\n", smart_dumps(PEEK));}
+            {printf("%s\n", smart_dumps(PEEK, 0));}
     } while (! MAPEMPTY);
 
     if (in_place && strlen(file_path) > 0)
     {
         fp = fopen(file_path, "w");
-        fprintf(fp, "%s\n", smart_dumps(stack[0]));
+        fprintf(fp, "%s\n", smart_dumps(stack[0], 0));
         fclose(fp);
     }
     return 0;

@@ -1,7 +1,7 @@
 # $Id: PKGBUILD 80520 2012-11-23 18:21:28Z kkeen $
 # Maintainer: Kyle Keen <keenerd@gmail.com>
 pkgname=jshon
-pkgver=20130815
+pkgver=20131105
 pkgrel=1
 pkgdesc="A json parser for the shell."
 arch=('i686' 'x86_64')
@@ -9,7 +9,7 @@ url="http://kmkeen.com/jshon/"
 license=('MIT')
 depends=('jansson')
 source=(http://kmkeen.com/$pkgname/$pkgname-$pkgver.tar.gz)
-md5sums=('3ef31b1954ef0838f67bcaf20993dcdd')
+md5sums=('84596bcf2d6cde7bbc0fcb4626765b99')
 
 build() {
   cd "$srcdir/$pkgname-$pkgver"

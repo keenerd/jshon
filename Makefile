@@ -11,6 +11,7 @@ MANFILE=jshon.1
 
 #VERSION=$(shell date +%Y%m%d)
 VERSION=$(shell git show -s --format="%ci" HEAD | cut -d ' ' -f 1 | tr -d '-')
+# git show -s --format="%ci" HEAD | sed -e 's/-//g' -e 's/ .*//'
 #VERSION=$(grep "^#define JSHONVER" | cut -d ' ' -f 3)
 
 all: $(DISTFILES)
@@ -29,7 +30,7 @@ install:
 
 dist: clean
 	sed -i "s/#define JSHONVER .*/#define JSHONVER ${VERSION}/" jshon.c
-	sed -i "s/Version:.*"/Version:\t${VERSION}" jshon.spec
+	sed -i "s/Version:.*/Version:\t${VERSION}/" jshon.spec
 	mkdir jshon-${VERSION}
 	cp jshon.c jshon.1 Makefile LICENSE jshon-${VERSION}
 	tar czf jshon-${VERSION}.tar.gz jshon-${VERSION}

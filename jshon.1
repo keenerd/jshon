@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a] -[s|n] value -[e|i|d] index
+-[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -76,6 +76,9 @@ calls can be nested, though the need is rare in practice.
 (unstring) returns a decoded string.  Only works on simple types: string, int, real, boolean, null.
 .Pp
 \&  jshon -e b -e 3 -u -> str
+.Pp
+.It Cm -j
+(json literal) returns encode json.  Works on all types, though most useful for string, array and object.
 .Pp
 .It Cm -p
 (pop) pops the last manipulation from the stack, rewinding the history.  Useful for extracting multiple values from one object.
@@ -152,6 +155,24 @@ always outputs one field per line.  Many unix tools expect multiple tab separate
 \&  jshon ... | sed 's/^$/-/' | paste -s -d '\\t\\t\\n'
 .Pp
 This replaces blanks with '-' and merges every three lines into one.
+.Pp
+Columns can also be extracted with a while loop, and conveniently loaded into variables at the same time:
+.Pp
+\&  while {
+.br
+\&      read -r var1
+.br
+\&      read -r var2
+.br
+\&      read -r var3
+.br
+\&  }; do [thing with vars]
+.br
+\&  done < <(jshon ...)
+.Pp
+If you are using 'read' with -0, be aware that read (bash built in) does not follow IFS.  Instead use
+.Pp
+\& read -r -d $'\\0' var1
 .Pp
 There are more and more tools that produce json output.  Often these use a line-oriented json/plaintext hybrid where each line is an independent json structure.  Sadly this means the output as a whole is not legitimate json.  Either loop though the data line by line (calling
 .Nm
