@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index
+\-[P|S|Q|V|C|I|0] [\-F path] \-[t|l|k|u|p|a|j] \-[s|n] value \-[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -38,44 +38,44 @@ in the middle of them.
 .It Cm -t
 (type) returns string, object, array, number, bool, null
 .Pp
-\&  jshon -t -> object
+\&  jshon \-t -> object
 .Pp
 .It Cm -l
 (length) returns an integer.  Only works on string, object, array.
 .Pp
-\&  jshon -l -> 3
+\&  jshon \-l -> 3
 .Pp
 .It Cm -k
 (keys) returns a newline separated list of keys.  Only works on object.
 .Pp
-\&  jshon -k -> a b c
+\&  jshon \-k -> a b c
 .Pp
 .It Cm -e index
 (extract) returns json value at "index".  Only works on object, array.  The index of an array is an integer.
 .Pp
-\&  jshon -e c -> {"d":4,"e":5}
+\&  jshon \-e c -> {"d":4,"e":5}
 .Pp
 .It Cm -a
 (across) maps the remaining actions across the selected element.  Only works on objects and arrays.  Multiple
 .Nm \-a
 calls can be nested, though the need is rare in practice.
 .Pp
-\&  jshon -e b -a -t -> bool bool null string
+\&  jshon \-e b \-a \-t -> bool bool null string
 .Pp
 .It Cm -s value
-(string) returns a json encoded string.  Can later be (-i)nserted to an existing structure.
+(string) returns a json encoded string.  Can later be (\-i)nserted to an existing structure.
 .Pp
-\&  jshon -s "back\[rs]slash" -> "back\[rs]\[rs]slash"
+\&  jshon \-s "back\[rs]slash" -> "back\[rs]\[rs]slash"
 .Pp
 .It Cm -n value
-(nonstring/number) returns a json element.  Can later be (-i)nserted to an existing structure.  Valid values are 'true', 'false', 'null', 'array', 'object', integers and floats.  Abbreviations t, f, n, [] and {} respectively also work.
+(nonstring/number) returns a json element.  Can later be (\-i)nserted to an existing structure.  Valid values are 'true', 'false', 'null', 'array', 'object', integers and floats.  Abbreviations t, f, n, [] and {} respectively also work.
 .Pp
-\&  jshon -n object -> {}
+\&  jshon \-n object -> {}
 .Pp
 .It Cm -u
 (unstring) returns a decoded string.  Only works on simple types: string, int, real, boolean, null.
 .Pp
-\&  jshon -e b -e 3 -u -> str
+\&  jshon \-e b \-e 3 \-u -> str
 .Pp
 .It Cm -j
 (json literal) returns encode json.  Works on all types, though most useful for string, array and object.
@@ -83,27 +83,28 @@ calls can be nested, though the need is rare in practice.
 .It Cm -p
 (pop) pops the last manipulation from the stack, rewinding the history.  Useful for extracting multiple values from one object.
 .Pp
-\& jshon -e c -e d -u -p -e e -u -> 4 5
+\& jshon \-e c \-e d \-u \-p \-e e \-u -> 4 5
 .Pp
 .It Cm -d index
 (delete) removes an item in an array or object.  Negative array indexes will wrap around.
 .Pp
-\&  jshon -d b -> {"a":1,"c":{"d":4,"e":5}}
+\&  jshon \-d b -> {"a":1,"c":{"d":4,"e":5}}
 .Pp
 .It Cm -i index
 (insert) is complicated.  It is the reverse of extract.  Extract puts a json sub-element on the stack.  Insert removes a sub-element from the stack, and inserts that bit of json into the larger array/object underneath.  Use extract to dive into the json tree, delete/string/nonstring to change things, and insert to push the changes back into the tree.
 .Pp
-\&  jshon -e a -i a -> the orginal json
+\&  jshon \-e a \-i a -> the orginal json
 .br
-\&  jshon -s one -i a -> {"a":"one", ...}
+\&  jshon \-s one \-i a -> {"a":"one", ...}
 .Pp
 Arrays are handled in a special manner.  Passing integers will insert a value without overwriting.  Negative integers are acceptable, as is the string 'append'.  To overwrite a value in an array: delete the index,
 .Nm \-n/s
 the new value, and then insert at the index.
 .Pp
-\&  jshon -e b -d 0 -s q -i 0 -> {"b":"q",false,null,"str"}
+\&  jshon \-e b \-d 0 \-s q \-i 0 -> {"b":"q",false,null,"str"}
 .
 .Pp
+.El
 .Sh NON-MANIPULATION
 There are several meta-options that do not directly edit json.  Call these at most once per invocation.
 .Pp
@@ -125,11 +126,11 @@ There are several meta-options that do not directly edit json.  Call these at mo
 .Nm
 running several times slower while using several times more memory.  However by-value is safer than by-reference and generally causes less surprise.  By-reference is enabled by default because there is no risk during read-only operations and generally makes editing json more convenient.
 .Pp
-\& jshon    -e c -n 7 -i d -p   -> c["d"] == 7
+\& jshon    \-e c \-n 7 \-i d \-p   -> c["d"] == 7
 .br
-\& jshon -V -e c -n 7 -i d -p   -> c["d"] == 5
+\& jshon \-V \-e c \-n 7 \-i d \-p   -> c["d"] == 5
 .br
-\& jshon -V -e c -n 7 -i d -i c -> c["d"] == 7
+\& jshon \-V \-e c \-n 7 \-i d \-i c -> c["d"] == 7
 .Pp
 With
 .Nm \-V
@@ -139,20 +140,21 @@ With
 (continue) on potentially recoverable errors.  For example, extracting values that don't exist will add 'null' to the edit stack instead of aborting.  Behavior may change in the future.
 .Pp
 .It Cm -I
-(in-place) file editing.  Requires a file to modify and so only works with -F.  This is meant for making slight changes to a json file.  When used, normal output is suppressed and the bottom of the edit stack is written out.
+(in-place) file editing.  Requires a file to modify and so only works with \-F.  This is meant for making slight changes to a json file.  When used, normal output is suppressed and the bottom of the edit stack is written out.
 .Pp
 .It Cm -0
-(null delimiters)  Changes the delimiter of -u from a newline to a null.  This option only affects -u because that is the only time a newline may legitimately appear in the output.
+(null delimiters)  Changes the delimiter of \-u from a newline to a null.  This option only affects \-u because that is the only time a newline may legitimately appear in the output.
 .Pp
 .It Cm --version
 Returns a YYYYMMDD timestamp and exits.
 .
 .Pp
+.El
 .Sh OTHER TOOLS
 .Nm
 always outputs one field per line.  Many unix tools expect multiple tab separated fields per line.  Pipe the output through 'paste' to fix this.  However, paste can not handle empty lines so pad those with a placeholder.  Here is an example:
 .Pp
-\&  jshon ... | sed 's/^$/-/' | paste -s -d '\\t\\t\\n'
+\&  jshon ... | sed 's/^$/\-/' | paste \-s \-d '\\t\\t\\n'
 .Pp
 This replaces blanks with '-' and merges every three lines into one.
 .Pp
@@ -160,11 +162,11 @@ Columns can also be extracted with a while loop, and conveniently loaded into va
 .Pp
 \&  while {
 .br
-\&      read -r var1
+\&      read \-r var1
 .br
-\&      read -r var2
+\&      read \-r var2
 .br
-\&      read -r var3
+\&      read \-r var3
 .br
 \&  }; do [thing with vars]
 .br
@@ -172,15 +174,15 @@ Columns can also be extracted with a while loop, and conveniently loaded into va
 .Pp
 If you are using 'read' with -0, be aware that read (bash built in) does not follow IFS.  Instead use
 .Pp
-\& read -r -d $'\\0' var1
+\& read \-r \-d $'\\0' var1
 .Pp
 There are more and more tools that produce json output.  Often these use a line-oriented json/plaintext hybrid where each line is an independent json structure.  Sadly this means the output as a whole is not legitimate json.  Either loop though the data line by line (calling
 .Nm
 once for each line) or convert it to a legitimate json array.  For example:
 .Pp
-\&  while read line; do jshon <<< "$line"; done < <(journalctl -o json)
+\&  while read line; do jshon <<< "$line"; done < <(journalctl \-o json)
 .Pp
-\&  journalctl -o json | sed -e '1i[' -e '$!s/$/,/' -e '$a]' | jshon
+\&  journalctl \-o json | sed \-e '1i[' \-e '$!s/$/,/' \-e '$a]' | jshon
 .Pp
 .
 .Pp
@@ -189,9 +191,16 @@ If you care about extremely short one liners, arguments can be condensed when it
 .Nm \-p(op)
 can be golfed as follows:
 .Pp
-\& jshon -e c -e d -u -p -e e -u == jshon -ec -ed -upee -u
+\& jshon \-e c \-e d \-u \-p \-e e \-u == jshon \-ec \-ed \-upee \-u
 .Pp
 I do not recommend doing this (it makes things much harder to understand) but some people golf despite the consequences.
+.
+.Pp
+.Sh CREATING JSON
+.Nm
+can create json by passing an empty object as input:
+.Pp
+\& jshon \-s one \-i a <<< "{}"
 .
 .Pp
 .Sh AUTHORS
