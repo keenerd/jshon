@@ -18,7 +18,7 @@ all: $(DISTFILES)
 
 $(DISTFILES): jshon.o
 
-strip: $(DISFILES)
+strip: $(DISTFILES)
 	strip --strip-all $(DISTFILES)
 
 clean:
