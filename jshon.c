@@ -33,7 +33,7 @@
     -s(tring) value -> adds json escapes
     -n(onstring) value -> creates true/false/null/array/object/int/float
     -u(nstring) -> removes json escapes, display value
-    -j(son lieral) -> preserves json escapes, display value
+    -j(son literal) -> preserves json escapes, display value
     -p(op) -> pop/undo the last manipulation
     -d(elete) index -> remove an element from an object or array
     -i(nsert) index -> opposite of extract, merges json up the stack
