@@ -198,9 +198,9 @@ I do not recommend doing this (it makes things much harder to understand) but so
 .Pp
 .Sh CREATING JSON
 .Nm
-can create json by passing an empty object as input:
+can create json by by starting with an empty object:
 .Pp
-\& jshon \-s one \-i a <<< "{}"
+\& jshon \-Q \-n {} \-n [] \-i data -> {"data":[]}
 .
 .Pp
 .Sh AUTHORS
