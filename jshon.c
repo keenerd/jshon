@@ -87,8 +87,15 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 #  define JSON_ESCAPE_SLASH 0
 #endif
 
-#if (defined (__SVR4) && defined (__sun))
+#if (defined (__SVR4) && defined (__sun)) || defined (_WIN32)
 #include <stdarg.h>
+
+#ifdef _WIN32
+typedef unsigned int uint;
+// Avoid no-declared error for mingw/gcc with -std=c99.
+extern int fileno(FILE*);
+extern char* strdup(const char*);
+#endif
 
 int asprintf(char **ret, const char *format, ...)
 {
