@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-Your system need to provide the [`jansson` library](http://www.digip.org/jansson/).
+Your system will need to provide the [`jansson` library](http://www.digip.org/jansson/).
 
 ### Install / Building 
 
@@ -12,13 +12,13 @@ Your system need to provide the [`jansson` library](http://www.digip.org/jansson
 
 #### Debian/Ubuntu/Linux Mint
 
-Assuming you have already download the sources and placed yourself in the directory. 
+These directions assume you have already downloaded the sources and placed yourself in the directory. 
 
 First, install the `jansson` library :
 
     sudo apt-get install libjansson{4,-dev}
 
-Then build the sources, b running :
+Then build the sources, by running :
 
     make
 
