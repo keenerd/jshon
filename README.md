@@ -1,5 +1,7 @@
 # jshon
 
+Jshon is a JSON parser designed for maximum convenience within the shell. Its homepage is [http://kmkeen.com/jshon/](http://kmkeen.com/jshon/).
+
 ## Dependencies
 
 Your system will need to provide the [`jansson` library](http://www.digip.org/jansson/).
