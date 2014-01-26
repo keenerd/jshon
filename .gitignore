@@ -1,3 +1,5 @@
 *.sw?
 jshon
 jshon.o
+Makefile.orig
+*DS_Store*
