@@ -7,7 +7,7 @@
 .Nd JSON parser for the shell
 .Sh SYNOPSIS
 .Nm jshon
--[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index
+-[P|S|Q|E|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index
 .Sh DESCRIPTION
 .Nm
 parses, reads and creates JSON.  It is designed to be as usable as possible from within the shell and replaces fragile adhoc parsers made from grep/sed/awk as well as heavyweight one-line parsers made from perl/python.
@@ -119,6 +119,9 @@ There are several meta-options that do not directly edit json.  Call these at mo
 .Pp
 .It Cm -Q
 (quiet) disables error reporting on stderr, so you don't have to sprinkle "2> /dev/null" throughout your script.
+.Pp
+.It Cm -E
+(emptyinput) generates an empty JSON object ("{}") when input is empty.
 .Pp
 .It Cm -V
 (by-value) enables pass-by-value on the edit history stack.  In extreme cases with thousands of deeply nested values this may result in

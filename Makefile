@@ -1,11 +1,12 @@
 # jshon - command line JSON parsing
 
-CFLAGS := -std=c99 -Wall -pedantic -Wextra -Werror ${CFLAGS}
+CFLAGS := -std=c99 ${CFLAGS}
 LDLIBS  = -ljansson
 INSTALL=install
 DESTDIR?=/
-MANDIR=$(DESTDIR)/usr/share/man/man1/
-TARGET_PATH=$(DESTDIR)/usr/bin
+PREFIX?=/usr
+MANDIR=$(DESTDIR)$(PREFIX)/share/man/man1/
+TARGET_PATH=$(DESTDIR)$(PREFIX)/bin
 DISTFILES=jshon
 MANFILE=jshon.1
 
@@ -25,8 +26,8 @@ clean:
 	rm -f *.o $(DISTFILES)
 
 install:
-	$(INSTALL) -D $(DISTFILES) $(TARGET_PATH)/$(DISTFILES)
-	$(INSTALL) -D $(MANFILE) $(MANDIR)/$(MANFILE)
+	$(INSTALL) $(DISTFILES) $(TARGET_PATH)/$(DISTFILES)
+	$(INSTALL) $(MANFILE) $(MANDIR)/$(MANFILE)
 
 dist: clean
 	sed -i "s/#define JSHONVER .*/#define JSHONVER ${VERSION}/" jshon.c

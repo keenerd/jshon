@@ -20,6 +20,7 @@
     -P -> detect and ignore JSONP wrapper, if present
     -S -> sort keys when writing objects
     -Q -> quiet, suppress stderr
+    -E -> allow empty input to represent empty json object
     -V -> enable slower/safer pass-by-value
     -C -> continue through errors
     -F path -> read from file instead of stdin
@@ -87,8 +88,15 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 #  define JSON_ESCAPE_SLASH 0
 #endif
 
-#if (defined (__SVR4) && defined (__sun))
+#if (defined (__SVR4) && defined (__sun)) || defined (_WIN32)
 #include <stdarg.h>
+
+#ifdef _WIN32
+typedef unsigned int uint;
+// Avoid no-declared error for mingw/gcc with -std=c99.
+extern int fileno(FILE*);
+extern char* strdup(const char*);
+#endif
 
 int asprintf(char **ret, const char *format, ...)
 {
@@ -129,6 +137,7 @@ int by_value = 0;
 int in_place = 0;
 char delim = '\n';
 char* file_path = "";
+int emptyinput = 0;
 
 // for error reporting
 int quiet = 0;
@@ -302,7 +311,7 @@ char* loop_read_fd(int fd)
 
         if (bytes_r == 0)
         {
-            return content;
+            goto nofail;
         }
 
         if (content_size + bytes_r >= content_capacity)
@@ -323,6 +332,19 @@ char* loop_read_fd(int fd)
         content[content_size] = '\0';
     }
 
+nofail:
+    if (content_size == 0 && emptyinput)
+    {
+        content = malloc(3);
+        if (content == NULL)
+        {
+            fprintf(stderr, "error: failed to allocate %d bytes\n", 3);
+            return NULL;
+        }
+        strncpy(content, "{}", 3);
+    }
+    else
+        content[content_size] = '\0';
     return content;
 
 fail:
@@ -341,9 +363,23 @@ char* read_stream(FILE* fp)
         return NULL;
     }
 
-    if (st.st_size == 0 && lseek(fileno(fp), 0, SEEK_CUR) < 0)
+    if (st.st_size == 0)
     {
-        return loop_read_fd(fileno(fp));
+        if (lseek(fileno(fp), 0, SEEK_CUR) < 0)
+        {
+            return loop_read_fd(fileno(fp));
+        }
+        else if (emptyinput)
+        {
+            buffer = malloc(3);
+            if (buffer == NULL)
+            {
+                fprintf(stderr, "error: failed to allocate %d bytes\n", 3);
+                return NULL;
+            }
+            strncpy(buffer, "{}", 3);
+            return buffer;
+        }
     }
 
     buffer = malloc(st.st_size + 1);
@@ -366,7 +402,12 @@ char* read_stream(FILE* fp)
 char* read_stdin(void)
 {
     if (isatty(fileno(stdin)))
-        {return "";}
+    {
+        if (emptyinput)
+            {return "{}";}
+        else
+            {return "";}
+    }
     return read_stream(stdin);
 }
 
@@ -839,7 +880,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCI0tlkupajF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQEVCI0tlkupajF:e:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -877,6 +918,9 @@ int main (int argc, char *argv[])
             case 'Q':
                 quiet = 1;
                 break;
+            case 'E':
+                emptyinput = 1;
+                break;
             case 'V':
                 by_value = 1;
                 break;
@@ -907,7 +951,7 @@ int main (int argc, char *argv[])
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|E|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -927,7 +971,7 @@ int main (int argc, char *argv[])
         {content = read_file(file_path);}
     else
         {content = read_stdin();}
-    if (!content[0] && !quiet)
+    if (!content[0] && !quiet && !emptyinput)
         {fprintf(stderr, "warning: nothing to read\n");}
 
     if (jsonp)
@@ -1040,6 +1084,7 @@ int main (int argc, char *argv[])
                 case 'P':  // not manipulations
                 case 'S': 
                 case 'Q':
+                case 'E':
                 case 'V':
                 case 'C':
                 case 'I':
