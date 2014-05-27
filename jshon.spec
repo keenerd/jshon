@@ -12,7 +12,7 @@ BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires:  gcc >= 3.4.6, jansson
 
-Requires:	jansson
+Requires:	libjansson4
 
 %description
 jshon
