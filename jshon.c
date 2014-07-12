@@ -943,9 +943,6 @@ int main (int argc, char *argv[])
       exit(1);
     }
 
-    if (!content[0] && !quiet)
-        {fprintf(stderr, "warning: nothing to read\n");}
-
     if (jsonp)
         {content = remove_jsonp_callback(content, &jsonp_rows, &jsonp_cols);}
 
