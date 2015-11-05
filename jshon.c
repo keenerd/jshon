@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <jansson.h>
 #include <errno.h>
+#include <sys/types.h>
 
 // MIT licensed, (c) 2011 Kyle Keen <keenerd@gmail.com>
 
