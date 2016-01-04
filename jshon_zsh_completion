@@ -5,103 +5,49 @@
 typeset -A opt_args
 setopt extendedglob
 
-
+# general operations
 _jshon_opts_operations=(
-   '-t [returns type]'
-   '-k [returns newline seperated list of keys]'
-   '-e [returns json value at "index"]'
-   '-n [returns a json element to be inserted into a structure]'
-   '-l [returns length (integer)]'
-   '-s [returns a json encoded string]'
-   '-d [removes item in array or object]'
-
+   -t'[returns type]'
+   -l'[returns length (integer)]'
+   -k'[returns newline seperated list of keys]'
+   -u'[returns decoded string]'
+   -p'[pops the last manipulation from the stack]'
+   -a'[maps the remaining actions across the selected element]'
+   -j'[returns encoded json]'
 )
-# t k e n l s d
+
+_jshon_opts_index=(
+   -e'[returns json value at index]:index'
+   -i'[]':index
+   -d'[removes item in array or object]:index'
+)  
+   
+_jshon_opts_value=(
+   -s'[returns a json encoded string]:value'
+   -n'[returns a json element to be inserted into a structure]:value'
+)
 # options for passing to _arguments: options common to all operations
 _jshon_opts_common=(
-   '-P [(jsonp) strips a jsonp callback]'
-   '-S [(sort) returns output sorted by key]'
-   '-Q [(quiet) disables error reporting on stderr]'
-   '-V [(by-value) enables pass by value on the edit stack]'
-   '-C [(continue) continue on potentially recoverable errors]'
+   -P'[strips a jsonp callback]'
+   -S'[returns output sorted by key]'
+   -Q'[disables error reporting on stderr]'
+   -V'[enables pass by value on the edit stack]'
+   -C'[continue on potentially recoverable errors]'
    -F'[<path> read from a file instead of stdin]:Path to file:_files -./'
+   -I'[In place manipulation]' #only works for -F
+   -0'[null delimiters - changes delimiter of -u from newline to null]' #only works for -u
+   --version'[returns a YYYYMMDD timestamp and exits]'
 )
 
-# options for passing to _arguments: options for -S
-_jshon_opts_sync=(
-    {-f,--file}'[Create a paste from FILE]:Path to file:_files -./'
-    {-l,--lexer}'[Lex paste with LANG]'
-    {-t,--theme}'[Style paste with pygments theme THEME]'
-    {-e,--extension}'[Specify MIME-type as EXT]'
-    {-L,--line}'[Highlight LINE in paste]'
-    {-p,--private}'[Return a less-guessable Id for paste]'
-    {-x,--sunset}'[Slate the paste for auto-sunset in SECS seconds]'
-    {-r,--render}'[Render paste from rst to HTML]'
-    {-v,--vanity}'[Use NAME as a custom Id]'
-    {-\#,--progress}'[Show a progress bar for the upload]'
-    {-m,--message}'[Use MSG as the note in the database]'
-)
-
-# options for passing to _arguments: options for -U
-_jshon_opts_update=(
-    {-f,--file}'[Create a paste from FILE]:Path to file:_files -./'
-    {-l,--lexer}'[Lex paste with LANG]'
-    {-t,--theme}'[Style paste with pygments theme THEME]'
-    {-e,--extension}'[Specify MIME-type as EXT]'
-    {-L,--line}'[Highlight LINE in paste]'
-    {-p,--private}'[Return a less-guessable Id for paste]'
-    {-x,--sunset}'[Slate the paste for auto-sunset in SECS seconds]'
-    {-r,--render}'[Render paste from rst to HTML]'
-    {-u,--uuid}"[Use UUID as authentication credential]:UUID:($_uuids)"
-    {-v,--vanity}'[Use NAME as a custom Id]'
-    {-\#,--progress}'[Show a progress bar for the upload]'
-    {-m,--message}'[Use MSG as the note in the database]'
-)
-
-# options for passing to _arguments: options for -D
-_jshon_opts_database=(
-    {-i,--init}'[Initalize a default database (no clobbering)]'
-    {-q,--query}'[Search the database for a paste matching STR]'
-    {-d,--delete}"[Manually delete the paste with UUID]:UUID:($_uuids)"
-    {-y,--prune}'[Remotely delete all expired pastes]'
-)
-
-
-# handles cases where no operation has yet been given
 _jshon_action_none() {
     _arguments -s : \
         "$_jshon_opts_common[@]" \
-        "$_jshon_opts_operations[@]"
+        "$_jshon_opts_index[@]" \
+        "$_jshon_opts_value[@]"
 }
 
-# handles --sync operation
-_jshon_action_sync() {
-    _arguments -s : \
-        '(--sync -S)'{-S,--sync} \
-        "$_jshon_opts_common[@]" \
-        "$_jshon_opts_sync[@]"
-}
-
-# handles --remove operation
-_jshon_action_remove() {
-    _arguments -s : \
-        '(--remove -R)'{-R,--remove} \
-        "$_jshon_opts_common[@]" \
-        "$_jshon_opts_remove[@]"
-}
-
-# handles --update operation
-_jshon_action_update() {
-    _arguments -s : \
-        '(--update -U)'{-U,--update} \
-        "$_jshon_opts_common[@]" \
-        "$_jshon_opts_update[@]"
-}
-
-# handles --database operation
 _jshon_action_database() {
     _arguments -s : \
-        '(--database -D)'{-D,--database} \
         "$_jshon_opts_common[@]" \
         "$_jshon_opts_database[@]"
 }
