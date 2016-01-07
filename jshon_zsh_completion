@@ -51,7 +51,6 @@ _jshon() {
         cmds+=("${${_jshon_opts_operations[(r)*$tmp\[*]%%\[*}#*\)}")
     done
     case $args in #$words[2] in
-        *h)              _message "no more arguments"  ;;
         *)               _jshon_action_none            ;;
     esac
 }
