@@ -17,9 +17,9 @@ _jshon_opts_operations=(
 )
 
 _jshon_opts_index=(
-   -e'[returns json value at index]:index'
-   -i'[insert item into array at index]:index'
-   -d'[removes item in array or object]:index'
+   -e'[returns json value at index]'
+   -i'[insert item into array at index]'
+   -d'[removes item in array or object]'
 )  
    
 # options for passing to _arguments: options common to all operations
@@ -56,4 +56,4 @@ _jshon() {
     esac
 }
 
-_jshon "@" || _message "Error"
+_jshon "$@"
