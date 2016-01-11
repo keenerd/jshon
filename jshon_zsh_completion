@@ -1,0 +1,58 @@
+#compdef jshon
+
+typeset -A opt_args
+setopt extendedglob
+
+# general operations
+_jshon_opts_operations=(
+   -t'[returns type]'
+   -l'[returns length (integer)]'
+   -k'[returns newline seperated list of keys]'
+   -p'[pops the last manipulation from the stack]'
+   -a'[maps the remaining actions across the selected element]'
+   -j'[returns encoded json]'
+   -u'[returns decoded string]'
+   -n'[returns a json element to be inserted into a structure]'
+   -s'[returns a json encoded string]'
+)
+
+_jshon_opts_index=(
+   -e'[returns json value at index]'
+   -i'[insert item into array at index]'
+   -d'[removes item in array or object]'
+)  
+   
+# options for passing to _arguments: options common to all operations
+_jshon_opts_common=(
+   -P'[strips a jsonp callback]'
+   -S'[returns output sorted by key]'
+   -Q'[disables error reporting on stderr]'
+   -V'[enables pass by value on the edit stack]'
+   -F'[<path> read from a file instead of stdin]:Path to file:_files -./'
+   -I'[In place editing (only works with -F)]'
+   -C'[continue on potentially recoverable errors]'
+   -0'[null delimiters - changes delimiter of -u from newline to null]' #only works for -u
+   --version'[returns a YYYYMMDD timestamp and exits]'
+)
+
+_jshon_action_none() {
+    _arguments -s : \
+        "$_jshon_opts_operations[@]" \
+        "$_jshon_opts_common[@]" \
+        "$_jshon_opts_index[@]" \
+}
+
+# main dispatcher
+_jshon() {
+    local -a args cmds;
+    local tmp
+    args=( ${${${(M)words:#-*}#-}:#-*} )
+    for tmp in $words; do
+        cmds+=("${${_jshon_opts_operations[(r)*$tmp\[*]%%\[*}#*\)}")
+    done
+    case $args in #$words[2] in
+        *)               _jshon_action_none            ;;
+    esac
+}
+
+_jshon "$@"
