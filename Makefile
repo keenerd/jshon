@@ -8,6 +8,8 @@ MANDIR=$(DESTDIR)/usr/share/man/man1/
 TARGET_PATH=$(DESTDIR)/usr/bin
 DISTFILES=jshon
 MANFILE=jshon.1
+ZSHSRC=jshon_zsh_completion
+ZSHCOMP=$(DESTDIR)/usr/share/zsh/site-functions/_pbpst
 
 #VERSION=$(shell date +%Y%m%d)
 VERSION=$(shell git show -s --format="%ci" HEAD | cut -d ' ' -f 1 | tr -d '-')
@@ -27,6 +29,7 @@ clean:
 install:
 	$(INSTALL) -D $(DISTFILES) $(TARGET_PATH)/$(DISTFILES)
 	$(INSTALL) -D $(MANFILE) $(MANDIR)/$(MANFILE)
+	$(INSTALL) -D $(ZSHSRC) $(ZSHCOMP)
 
 dist: clean
 	sed -i "s/#define JSHONVER .*/#define JSHONVER ${VERSION}/" jshon.c
