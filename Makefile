@@ -9,7 +9,7 @@ TARGET_PATH=$(DESTDIR)/usr/bin
 DISTFILES=jshon
 MANFILE=jshon.1
 ZSHSRC=jshon_zsh_completion
-ZSHCOMP=$(DESTDIR)/usr/share/zsh/site-functions/_pbpst
+ZSHCOMP=$(DESTDIR)/usr/share/zsh/site-functions/_jshon
 
 #VERSION=$(shell date +%Y%m%d)
 VERSION=$(shell git show -s --format="%ci" HEAD | cut -d ' ' -f 1 | tr -d '-')
