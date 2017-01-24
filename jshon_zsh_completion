@@ -18,6 +18,7 @@ _jshon_opts_operations=(
 
 _jshon_opts_index=(
    -e'[returns json value at index]'
+   -E'[returns json value at tag:name:value]'
    -i'[insert item into array at index]'
    -d'[removes item in array or object]'
 )  

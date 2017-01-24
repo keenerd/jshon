@@ -31,6 +31,7 @@
     -l(ength) -> only works on str, dict, list
     -k(eys) -> only works on dict
     -e(xtract) index -> only works on dict, list
+    -E(xtract name/values) nametag:namevalue:valuetag -> only works on dict
     -s(tring) value -> adds json escapes
     -n(onstring) value -> creates true/false/null/array/object/int/float
     -u(nstring) -> removes json escapes, display value
@@ -63,6 +64,12 @@
 
     -L(abel)
     add jsonpipe/style/prefix/labels\t to pretty-printed json
+
+    -E tag:value:value is for extracting  name/value pairs.  Given:
+       [{ tagname: color, tagvalue: red },
+        { tagname: texture, tagvalue: squishy },
+        { tagname: height, tagvalue: 10ft }]
+       jshon -a -E tagname:height:tagvalue -> 10ft
 
     color?
     loadf for stdin?
@@ -764,6 +771,69 @@ json_t* extract(json_t* json, char* key)
     json_err("has no elements to extract", json);
     return json_null();
 }
+json_t* extract_name_value(json_t* json, char* key)
+// extra value from a name/value pair
+{
+    json_t* tempname;
+    json_t* tempvalue;
+    const char* tempstrval;
+    char *nametag, *nameval;
+    char *valuetag;
+
+    // OutputKey:NetworkStackName:OutputValue
+    nametag=strtok(key,":");
+    nameval=strtok(NULL,":");
+    valuetag=strtok(NULL,":");
+    if ((nametag==NULL) || (nameval==NULL) || (valuetag==NULL)) {
+        arg_err("parse error: expecting 'tag:val:tag' arg %i, \"%s\"");
+        return json_null();
+    }
+
+    switch (json_typeof(json))
+    {
+        case JSON_OBJECT:
+            // Do we have a nametag with the proper nameval?
+            tempname = json_object_get(json, nametag);
+            if (tempname == NULL)
+                return json_null();
+            if (json_typeof(tempname) != JSON_STRING)
+                return json_null();
+            tempstrval = json_string_value(tempname);
+            if (tempstrval == NULL)
+                return json_null();
+
+            if (strcmp(nameval, tempstrval) != 0)
+                return json_null();
+
+            //  Now do we have the valuetag?
+            tempvalue = json_object_get(json, valuetag);
+            if (tempvalue == NULL)
+                return json_null();
+            if (json_typeof(tempvalue) != JSON_STRING)
+                return json_null();
+            tempstrval = json_string_value(tempvalue);
+            if (tempstrval == NULL)
+                return json_null();
+
+            printf("%s\n", tempstrval);
+            return tempvalue;
+            //if (temp == NULL)
+                //{break;}
+            //return temp;
+            return json_null();
+        case JSON_ARRAY:
+        case JSON_STRING:
+        case JSON_INTEGER:
+        case JSON_REAL:
+        case JSON_TRUE:
+        case JSON_FALSE:
+        case JSON_NULL:
+        default:
+            break;
+    }
+    json_err("has no elements to extract", json);
+    return json_null();
+}
 
 json_t* delete(json_t* json, char* key)
 // no error checking
@@ -851,7 +921,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCI0tlkupajF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCI0tlkupajF:e:E:s:n:d:i:"
 {
     char* content = "";
     char* arg1 = "";
@@ -910,6 +980,7 @@ int main (int argc, char *argv[])
             case 'u':
             case 'p':
             case 'e':
+            case 'E':
             case 'j':
             case 's':
             case 'n':
@@ -1025,6 +1096,12 @@ int main (int argc, char *argv[])
                     json = PEEK;
                     PUSH(extract(maybe_deep(json), arg1));
                     output = 1;
+                    break;
+                case 'E':  // extract
+                    arg1 = (char*) strdup(optarg);
+                    json = PEEK;
+                    PUSH(extract_name_value(maybe_deep(json), arg1));
+                    output = 0;
                     break;
                 case 'j':  // json literal
                     printf("%s%c", smart_dumps(PEEK, dumps_compact), delim);
