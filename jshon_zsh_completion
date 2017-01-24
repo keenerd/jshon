@@ -20,6 +20,7 @@ _jshon_opts_index=(
    -e'[returns json value at index]'
    -i'[insert item into array at index]'
    -d'[removes item in array or object]'
+   -w'[wraps item in named object]'
 )  
    
 # options for passing to _arguments: options common to all operations

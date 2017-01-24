@@ -853,7 +853,7 @@ void debug_map()
 }
 
 int main (int argc, char *argv[])
-#define ALL_OPTIONS "PSQVCI0tlkupajF:e:s:n:d:i:"
+#define ALL_OPTIONS "PSQVCI0tlkupajF:e:s:n:d:i:w:"
 {
     char* content = "";
     char* arg1 = "";
@@ -918,10 +918,11 @@ int main (int argc, char *argv[])
             case 'd':
             case 'i':
             case 'a':
+            case 'w':
                 break;
             default:
                 if (!quiet)
-                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d] index\n");}
+                    {fprintf(stderr, "Valid: -[P|S|Q|V|C|I|0] [-F path] -[t|l|k|u|p|a|j] -[s|n] value -[e|i|d|w] index\n");}
                 if (crash)
                     {exit(2);}
                 break;
@@ -1052,6 +1053,12 @@ int main (int argc, char *argv[])
                     if (!empty)
                         {MAPNEXT();}
                     output = 0;
+                    break;
+                case 'w':  // wrap
+                    arg1 = (char*) strdup(optarg);
+                    json = POP;
+                    PUSH(update_native(json_object(), arg1, json));
+                    output = 1;
                     break;
                 case 'P':  // not manipulations
                 case 'S': 
