@@ -368,6 +368,8 @@ char* read_stream(FILE* fp)
                 (ssize_t)st.st_size, (ssize_t)bytes_r);
     }
 
+    buffer[bytes_r] = 0;
+
     return buffer;
 }
 
