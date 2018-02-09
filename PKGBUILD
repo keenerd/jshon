@@ -1,7 +1,7 @@
 # $Id: PKGBUILD 80520 2012-11-23 18:21:28Z kkeen $
 # Maintainer: Kyle Keen <keenerd@gmail.com>
 pkgname=jshon
-pkgver=20131105
+pkgver=20170302
 pkgrel=1
 pkgdesc="A json parser for the shell."
 arch=('i686' 'x86_64')
