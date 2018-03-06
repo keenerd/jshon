@@ -641,7 +641,7 @@ int compare_strcmp(const void *a, const void *b)
     return strcmp(sa, sb);
 }
 
-void keys(json_t* json)
+void keys(json_t* json, char delim)
 // shoddy, prints directly
 {
     void* iter;
@@ -665,7 +665,7 @@ void keys(json_t* json)
         {qsort(keys, n, sizeof(char*), compare_strcmp);}
 
     for (i = 0; i < n; ++i)
-        {printf("%s\n", keys[i]);}
+        {printf("%s%c", keys[i], delim);}
 
     free(keys);
 }
@@ -999,7 +999,7 @@ int main (int argc, char *argv[])
                     output = 0;
                     break;
                 case 'k':  // keys
-                    keys(PEEK);
+                    keys(PEEK, delim);
                     output = 0;
                     break;
                 case 'u':  // unescape string
