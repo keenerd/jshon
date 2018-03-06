@@ -55,6 +55,19 @@ in the middle of them.
 .Pp
 \&  jshon \-e c -> {"d":4,"e":5}
 .Pp
+.It Cm -E nametag:namevalue:valuetag
+(Extract) returns json value from a name/value pair.  Only works on object.
+.br
+\&   Given:
+.br
+\&       [{ tagname: color, tagvalue: red },
+.br
+\&        { tagname: texture, tagvalue: squishy },
+.br
+\&        { tagname: height, tagvalue: 10ft }]
+.br
+\&   jshon -a -E tagname:height:tagvalue -> 10ft
+.Pp
 .It Cm -a
 (across) maps the remaining actions across the selected element.  Only works on objects and arrays.  Multiple
 .Nm \-a
