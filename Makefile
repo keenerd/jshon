@@ -4,12 +4,13 @@ CFLAGS := -std=c99 -Wall -pedantic -Wextra -Werror ${CFLAGS}
 LDLIBS  = -ljansson
 INSTALL=install
 DESTDIR?=/
-MANDIR=$(DESTDIR)/usr/share/man/man1/
-TARGET_PATH=$(DESTDIR)/usr/bin
+PREFIX?=/usr/local
+MANDIR=$(DESTDIR)$(PREFIX)/share/man/man1/
+TARGET_PATH=$(DESTDIR)$(PREFIX)/bin
 DISTFILES=jshon
 MANFILE=jshon.1
 ZSHSRC=jshon_zsh_completion
-ZSHCOMP=$(DESTDIR)/usr/share/zsh/site-functions/_pbpst
+ZSHCOMP=$(DESTDIR)$(PREFIX)/share/zsh/site-functions/_pbpst
 
 #VERSION=$(shell date +%Y%m%d)
 VERSION=$(shell git show -s --format="%ci" HEAD | cut -d ' ' -f 1 | tr -d '-')
