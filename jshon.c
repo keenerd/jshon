@@ -92,7 +92,6 @@ static json_t *compat_json_loads(const char *input, json_error_t *error)
 #include <stdarg.h>
 
 #ifdef _WIN32
-typedef unsigned int uint;
 // Avoid no-declared error for mingw/gcc with -std=c99.
 extern int fileno(FILE*);
 extern char* strdup(const char*);
@@ -210,11 +209,11 @@ json_t* maybe_deep(json_t* json)
 
 typedef struct
 {
-    void*    itr;  // object iterator
-    json_t** stk;  // stack reentry
-    uint     lin;  // array iterator
-    int      opt;  // optind reentry
-    int      fin;  // finished iteration
+    void*        itr;  // object iterator
+    json_t**     stk;  // stack reentry
+    unsigned int lin;  // array iterator
+    int          opt;  // optind reentry
+    int          fin;  // finished iteration
 } mapping;
 
 mapping mapstack[STACKDEPTH];
