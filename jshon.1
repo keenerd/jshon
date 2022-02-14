@@ -93,7 +93,7 @@ calls can be nested, though the need is rare in practice.
 .It Cm -i index
 (insert) is complicated.  It is the reverse of extract.  Extract puts a json sub-element on the stack.  Insert removes a sub-element from the stack, and inserts that bit of json into the larger array/object underneath.  Use extract to dive into the json tree, delete/string/nonstring to change things, and insert to push the changes back into the tree.
 .Pp
-\&  jshon \-e a \-i a -> the orginal json
+\&  jshon \-e a \-i a -> the original json
 .br
 \&  jshon \-s one \-i a -> {"a":"one", ...}
 .Pp
