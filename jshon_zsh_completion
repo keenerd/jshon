@@ -7,7 +7,7 @@ setopt extendedglob
 _jshon_opts_operations=(
    -t'[returns type]'
    -l'[returns length (integer)]'
-   -k'[returns newline seperated list of keys]'
+   -k'[returns newline separated list of keys]'
    -p'[pops the last manipulation from the stack]'
    -a'[maps the remaining actions across the selected element]'
    -j'[returns encoded json]'
