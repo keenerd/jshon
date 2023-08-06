@@ -436,7 +436,7 @@ char* remove_jsonp_callback(char* in, int* rows_skipped, int* cols_skipped)
         {++first;}
 
     // skip leading identifier if present
-    while (first < last && JSON_IDENTIFIER(*first))
+    while (first < last && JSON_IDENTIFIER((int)*first))
         {++first;}
 
     // skip over forward brackets and whitespace, counting down the opening brackets
